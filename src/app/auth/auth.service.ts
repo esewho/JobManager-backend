@@ -130,44 +130,14 @@ export class AuthService {
     };
   }
 
-  async logAdmin(
-    dto: LoginDto,
-  ): Promise<{ accessToken: string; user: SafeUser }> {
-    const userWithPassword = await this.prisma.user.findUnique({
-      where: {
-        username: dto.username,
-      },
-      select: {
-        id: true,
-        username: true,
-        role: true,
-        password: true,
-        createdAt: true,
-      },
+  async logOut(userId: string): Promise<void> {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
     });
-    if (!userWithPassword) {
-      throw new BadRequestException('Invalid credentials');
+    if (!user) {
+      throw new BadRequestException('User not found');
     }
-
-    const passwordMatches = await bcrypt.compare(
-      dto.password,
-      userWithPassword.password,
-    );
-    if (!passwordMatches) {
-      throw new BadRequestException('Invalid credentials');
-    }
-
-    const { password, ...safeUser } = userWithPassword;
-
-    return {
-      accessToken: await this.signToken({
-        sub: safeUser.id,
-        role: safeUser.role,
-        username: safeUser.username,
-      }),
-      user: safeUser,
-    };
-  }
+    
 
   private async signToken(payload: {
     sub: string;
