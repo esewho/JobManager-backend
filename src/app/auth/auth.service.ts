@@ -130,15 +130,6 @@ export class AuthService {
     };
   }
 
-  async logOut(userId: string): Promise<void> {
-    const user = await this.prisma.user.findUnique({
-      where: { id: userId },
-    });
-    if (!user) {
-      throw new BadRequestException('User not found');
-    }
-    
-
   private async signToken(payload: {
     sub: string;
     username: string;
