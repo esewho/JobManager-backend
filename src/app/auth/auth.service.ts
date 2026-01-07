@@ -89,6 +89,86 @@ export class AuthService {
     };
   }
 
+  async registerAdmin(
+    dto: RegisterDto,
+  ): Promise<{ accessToken: string; user: SafeUser }> {
+    const adminCount = await this.prisma.user.count({
+      where: {
+        role: Role.ADMIN,
+      },
+    });
+    if (adminCount > 0) {
+      throw new BadRequestException('Admin registration is restricted');
+    }
+    const existingUser = await this.prisma.user.findUnique({
+      where: {
+        username: dto.username,
+      },
+      select: { id: true },
+    });
+    if (existingUser) {
+      throw new BadRequestException('User already exists');
+    }
+
+    const hashedPassword = await bcrypt.hash(dto.password, 10);
+
+    const user = await this.prisma.user.create({
+      data: {
+        username: dto.username,
+        password: hashedPassword,
+        role: Role.ADMIN,
+      },
+      select: { id: true, username: true, role: true, createdAt: true },
+    });
+    return {
+      accessToken: await this.signToken({
+        sub: user.id,
+        role: user.role,
+        username: dto.username,
+      }),
+      user,
+    };
+  }
+
+  async logAdmin(
+    dto: LoginDto,
+  ): Promise<{ accessToken: string; user: SafeUser }> {
+    const userWithPassword = await this.prisma.user.findUnique({
+      where: {
+        username: dto.username,
+      },
+      select: {
+        id: true,
+        username: true,
+        role: true,
+        password: true,
+        createdAt: true,
+      },
+    });
+    if (!userWithPassword) {
+      throw new BadRequestException('Invalid credentials');
+    }
+
+    const passwordMatches = await bcrypt.compare(
+      dto.password,
+      userWithPassword.password,
+    );
+    if (!passwordMatches) {
+      throw new BadRequestException('Invalid credentials');
+    }
+
+    const { password, ...safeUser } = userWithPassword;
+
+    return {
+      accessToken: await this.signToken({
+        sub: safeUser.id,
+        role: safeUser.role,
+        username: safeUser.username,
+      }),
+      user: safeUser,
+    };
+  }
+
   private async signToken(payload: {
     sub: string;
     username: string;
