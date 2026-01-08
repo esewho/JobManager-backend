@@ -92,4 +92,21 @@ export class WorkSessionsService {
       status: updatedSession.status,
     };
   }
+
+  async getSessionsByUser(userId: string): Promise<WorkSessionDto[]> {
+    const sessions = await this.prisma.workSession.findMany({
+      where: { userId },
+      orderBy: { checkIn: 'desc' },
+    });
+    return sessions.map((session) => {
+      return {
+        id: session.id,
+        checkIn: session.checkIn,
+        checkOut: session.checkOut || undefined,
+        totalMinutes: session.totalMinutes,
+        extraMinutes: session.extraMinutes,
+        status: session.status,
+      };
+    });
+  }
 }

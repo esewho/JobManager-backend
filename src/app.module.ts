@@ -5,6 +5,7 @@ import { ConfigModule } from '@nestjs/config';
 import { PrismaModule } from './prisma/prisma.module';
 import { AuthModule } from './app/auth/auth.module';
 import { WorkSessionsModule } from './app/work-sessions/work-sessions.module';
+import { TipPoolModule } from './app/tip-pool/tip-pool.module';
 
 @Module({
   imports: [
@@ -12,6 +13,7 @@ import { WorkSessionsModule } from './app/work-sessions/work-sessions.module';
     PrismaModule,
     AuthModule,
     WorkSessionsModule,
+    TipPoolModule,
   ],
   controllers: [AppController],
   providers: [AppService],

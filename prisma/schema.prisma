@@ -54,12 +54,11 @@ model WorkSession{
 
 model TipPool{
   id String @id @default(cuid())
-  totalAmount Float
-  workersCount Int
-  amountPerWorker Float
+  totalAmount Int
   date DateTime @unique
   distributions TipDistribution[]
   createdAt DateTime @default(now())
+
 }
 
 model TipDistribution{
@@ -68,6 +67,7 @@ model TipDistribution{
   tipPoolId String
   user User @relation(fields: [userId], references: [id])
   tipPool TipPool @relation(fields: [tipPoolId], references: [id])
-  amount Decimal @db.Decimal(10, 2)
+  amount Int
   createdAt DateTime @default(now())
+  @@unique([userId, tipPoolId])
 }
