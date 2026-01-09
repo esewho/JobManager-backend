@@ -39,8 +39,15 @@ export class AuthService {
         username: dto.username,
         password: hashedPassword,
         role: Role.EMPLOYEE,
+        active: true,
       },
-      select: { id: true, username: true, role: true, createdAt: true },
+      select: {
+        id: true,
+        username: true,
+        role: true,
+        createdAt: true,
+        active: true,
+      },
     });
     return {
       accessToken: await this.signToken({
@@ -63,10 +70,14 @@ export class AuthService {
         role: true,
         password: true,
         createdAt: true,
+        active: true,
       },
     });
     if (!userWithPassword) {
       throw new BadRequestException('Invalid credentials');
+    }
+    if (!userWithPassword.active) {
+      throw new BadRequestException('User account is deactivated');
     }
 
     const passwordMatches = await bcrypt.compare(

@@ -6,6 +6,7 @@ import { PrismaModule } from './prisma/prisma.module';
 import { AuthModule } from './app/auth/auth.module';
 import { WorkSessionsModule } from './app/work-sessions/work-sessions.module';
 import { TipPoolModule } from './app/tip-pool/tip-pool.module';
+import { AdminModule } from './app/admin/admin.module';
 
 @Module({
   imports: [
@@ -14,6 +15,7 @@ import { TipPoolModule } from './app/tip-pool/tip-pool.module';
     AuthModule,
     WorkSessionsModule,
     TipPoolModule,
+    AdminModule,
   ],
   controllers: [AppController],
   providers: [AppService],

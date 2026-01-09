@@ -98,4 +98,21 @@ export class TipPoolService {
       };
     });
   }
+
+  async getMyDailyTips(userId: string) {
+    const distributions = await this.prisma.tipDistribution.findMany({
+      where: { userId },
+      include: {
+        tipPool: {
+          select: { date: true, totalAmount: true },
+        },
+      },
+      orderBy: { tipPool: { date: 'desc' } },
+    });
+    return distributions.map((dist) => ({
+      date: dist.tipPool.date,
+      amount: dist.amount,
+      totalPoolAmount: dist.tipPool.totalAmount,
+    }));
+  }
 }
