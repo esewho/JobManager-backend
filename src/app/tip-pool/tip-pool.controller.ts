@@ -17,13 +17,6 @@ export class TipPoolController {
     return await this.tipPoolService.createTipPool(dto);
   }
 
-  @Get('all')
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(Role.ADMIN)
-  async getAllTipPools() {
-    return await this.tipPoolService.getAllTipPools();
-  }
-
   @Get('my-daily-tips')
   @UseGuards(JwtAuthGuard)
   async getMyDailyTips(@User('userId') userId: string) {

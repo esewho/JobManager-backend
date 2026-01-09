@@ -19,84 +19,85 @@ export class TipPoolService {
     date.setHours(0, 0, 0, 0);
 
     const existingPool = await this.prisma.tipPool.findUnique({
-      where: { date: date },
+      where: { date },
     });
     if (existingPool) {
       throw new BadRequestException('Tip pool for this date already exists');
     }
+
     const { start, end } = getDayRange(date);
 
-    const sessions = await this.prisma.workSession.findMany({
-      where: {
-        checkIn: { gte: start, lte: end },
-      },
-      select: { userId: true },
-    });
-    if (sessions.length === 0) {
-      throw new BadRequestException(
-        'No work sessions found for the specified date',
-      );
-    }
+    const result = await this.prisma.$transaction(async (tx) => {
+      const openSessions = await tx.workSession.findMany({
+        where: {
+          status: 'OPEN',
+          checkIn: { gte: start, lte: end },
+        },
+      });
 
-    const uniqueUserIds = Array.from(
-      new Set(sessions.map((session) => session.userId)),
-    );
+      const now = new Date();
+      const WORKDAY_MINUTES = 8 * 60;
 
-    const workersCount = uniqueUserIds.length;
-    const amountPerWorker = Math.floor(dto.totalAmount / workersCount);
+      for (const session of openSessions) {
+        const diffMs = now.getTime() - session.checkIn.getTime();
+        const totalMinutes = Math.max(Math.floor(diffMs / 60000), 0);
+        const extraMinutes = Math.max(totalMinutes - WORKDAY_MINUTES, 0);
 
-    if (amountPerWorker === 0) {
-      throw new BadRequestException(
-        'Total amount is too low to distribute among workers',
-      );
-    }
+        await tx.workSession.update({
+          where: { id: session.id },
+          data: {
+            checkOut: now,
+            totalMinutes,
+            extraMinutes,
+            status: 'CLOSED',
+          },
+        });
+      }
 
-    const tipPool = await this.prisma.$transaction(async (tx) => {
+      const sessions = await tx.workSession.findMany({
+        where: {
+          status: 'CLOSED',
+          checkIn: { gte: start, lte: end },
+        },
+        select: { userId: true },
+      });
+
+      if (sessions.length === 0) {
+        throw new BadRequestException('No work sessions found for this date');
+      }
+
+      const uniqueUserIds = [...new Set(sessions.map((s) => s.userId))];
+      const workersCount = uniqueUserIds.length;
+      const amountPerWorker = Math.floor(dto.totalAmount / workersCount);
+
+      if (amountPerWorker === 0) {
+        throw new BadRequestException('Total amount too low');
+      }
+
       const pool = await tx.tipPool.create({
         data: {
-          date: date,
+          date,
           totalAmount: dto.totalAmount,
         },
       });
+
       await tx.tipDistribution.createMany({
         data: uniqueUserIds.map((userId) => ({
           tipPoolId: pool.id,
-          userId: userId,
+          userId,
           amount: amountPerWorker,
         })),
       });
-      return pool;
+
+      return { pool, workersCount, amountPerWorker };
     });
+
     return {
-      date: tipPool.date,
+      date: result.pool.date,
       totalAmount: dto.totalAmount,
-      workersCount,
-      amountPerWorker,
+      workersCount: result.workersCount,
+      amountPerWorker: result.amountPerWorker,
     };
-  }
-
-  async getAllTipPools() {
-    const tipPools = await this.prisma.tipPool.findMany({
-      orderBy: { date: 'desc' },
-      include: {
-        distributions: {
-          select: { id: true },
-        },
-      },
-    });
-
-    return tipPools.map((pool) => {
-      const workersCount = pool.distributions.length;
-      const amountPerWorker =
-        workersCount > 0 ? Math.floor(pool.totalAmount / workersCount) : 0;
-
-      return {
-        date: pool.date,
-        totalAmount: pool.totalAmount,
-        workersCount,
-        amountPerWorker,
-      };
-    });
   }
 
   async getMyDailyTips(userId: string) {
