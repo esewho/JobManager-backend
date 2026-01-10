@@ -1,6 +1,7 @@
 import { Injectable, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { TipPoolDto } from './Dto/tipPool.dto';
+import { WorkSessionStatus } from '@prisma/client';
 
 function getDayRange(date: Date) {
   const start = new Date(date);
@@ -19,7 +20,7 @@ export class TipPoolService {
     date.setHours(0, 0, 0, 0);
 
     const existingPool = await this.prisma.tipPool.findUnique({
-      where: { date },
+      where: { date_shift: { date, shift: dto.shift } },
     });
     if (existingPool) {
       throw new BadRequestException('Tip pool for this date already exists');
@@ -30,7 +31,7 @@ export class TipPoolService {
     const result = await this.prisma.$transaction(async (tx) => {
       const openSessions = await tx.workSession.findMany({
         where: {
-          status: 'OPEN',
+          status: WorkSessionStatus.OPEN,
           checkIn: { gte: start, lte: end },
         },
       });
@@ -49,15 +50,28 @@ export class TipPoolService {
             checkOut: now,
             totalMinutes,
             extraMinutes,
-            status: 'CLOSED',
+            status: WorkSessionStatus.CLOSED,
           },
         });
+      }
+      const pendingSessions = await tx.workSession.count({
+        where: {
+          status: WorkSessionStatus.CLOSED,
+          checkIn: { gte: start, lte: end },
+          shift: null,
+        },
+      });
+      if (pendingSessions > 0) {
+        throw new BadRequestException(
+          'There are closed sessions without assigned shift',
+        );
       }
 
       const sessions = await tx.workSession.findMany({
         where: {
-          status: 'CLOSED',
+          status: WorkSessionStatus.CLOSED,
           checkIn: { gte: start, lte: end },
+          shift: dto.shift,
         },
         select: { userId: true },
       });
@@ -77,6 +91,7 @@ export class TipPoolService {
       const pool = await tx.tipPool.create({
         data: {
           date,
+          shift: dto.shift,
           totalAmount: dto.totalAmount,
         },
       });
@@ -94,7 +109,8 @@ export class TipPoolService {
 
     return {
       date: result.pool.date,
-      totalAmount: dto.totalAmount,
+      shift: result.pool.shift,
+      totalAmount: result.pool.totalAmount,
       workersCount: result.workersCount,
       amountPerWorker: result.amountPerWorker,
     };

@@ -1,4 +1,5 @@
 import { WorkSessionStatus } from '@prisma/client';
+import { WorkShift } from '@prisma/client';
 
 export class WorkSessionDto {
   id: string;

@@ -16,6 +16,7 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+
 enum Role {
   ADMIN
   EMPLOYEE
@@ -24,6 +25,11 @@ enum Role {
   enum WorkSessionStatus {
   OPEN
   CLOSED
+  }
+
+  enum WorkShift {
+    MIDDAY
+    NIGHT
   }
 
 model User {
@@ -46,6 +52,7 @@ model WorkSession{
   status WorkSessionStatus @default(OPEN)
   checkIn DateTime @default(now())
   checkOut DateTime?
+  shift WorkShift?
   totalMinutes Int @default(0)
   extraMinutes Int @default(0)
   createdAt DateTime @default(now())
@@ -57,8 +64,11 @@ model TipPool{
   id String @id @default(cuid())
   totalAmount Int
   date DateTime @unique
+  shift WorkShift
   distributions TipDistribution[]
   createdAt DateTime @default(now())
+
+@@unique([date, shift])
 
 }
 

@@ -1,4 +1,5 @@
-import { IsDateString, IsInt, Min } from 'class-validator';
+import { WorkShift } from '@prisma/client';
+import { IsDateString, IsEnum, IsInt, Min } from 'class-validator';
 
 export class TipPoolDto {
   @IsDateString()
@@ -6,4 +7,6 @@ export class TipPoolDto {
   @IsInt()
   @Min(0)
   totalAmount: number;
+  @IsEnum(WorkShift)
+  shift!: WorkShift;
 }

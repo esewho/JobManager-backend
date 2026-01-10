@@ -5,6 +5,7 @@ import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { Role } from '@prisma/client';
 import { Roles } from '../common/decorators/roles.decorator';
 import { UserStatusDto } from './Dto/userStatus.dto';
+import { UpdateSessionShift } from './Dto/updateSessionShift.dto';
 
 @Controller('admin')
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -25,5 +26,13 @@ export class AdminController {
   @Get('working-users')
   async getWorkingUsers() {
     return await this.AdminService.getWorkingUsers();
+  }
+
+  @Patch('work-sessions/:id/shift')
+  async updateWorkSessionShift(
+    @Param('id') sessionId: string,
+    @Body() dto: UpdateSessionShift,
+  ) {
+    return await this.AdminService.updateWorkSessionShift(sessionId, dto.shift);
   }
 }

@@ -1,6 +1,10 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { PrismaService } from 'src/prisma/prisma.service';
-import { WorkSessionStatus } from '@prisma/client';
+import { WorkSessionStatus, WorkShift } from '@prisma/client';
 
 @Injectable()
 export class AdminService {
@@ -41,5 +45,21 @@ export class AdminService {
       checkIn: session.checkIn,
       role: session.user.role,
     }));
+  }
+
+  async updateWorkSessionShift(sessionId: string, shift: WorkShift) {
+    const session = await this.prisma.workSession.findUnique({
+      where: { id: sessionId },
+    });
+    if (!session) {
+      throw new NotFoundException('Work session not found');
+    }
+    if (session.status !== WorkSessionStatus.CLOSED) {
+      throw new BadRequestException('Only closed sessions can be updated');
+    }
+    return await this.prisma.workSession.update({
+      where: { id: sessionId },
+      data: { shift },
+    });
   }
 }
