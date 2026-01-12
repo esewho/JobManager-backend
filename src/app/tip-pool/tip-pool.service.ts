@@ -2,7 +2,6 @@ import { Injectable, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { TipPoolDto } from './Dto/tipPool.dto';
 import { WorkSessionStatus } from '@prisma/client';
-import { start } from 'repl';
 
 function getDayRange(date: Date) {
   const start = new Date(date);
