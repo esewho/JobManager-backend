@@ -35,4 +35,14 @@ export class AdminController {
   ) {
     return await this.AdminService.updateWorkSessionShift(sessionId, dto.shift);
   }
+
+  @Get('all-work-sessions')
+  async getAllWorkSessions() {
+    return await this.AdminService.getAllWorkSessions();
+  }
+
+  @Get('all-tipPools')
+  async getAllTipsPools() {
+    return await this.AdminService.getAllTipsPools();
+  }
 }

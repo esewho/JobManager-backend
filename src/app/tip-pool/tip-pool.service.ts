@@ -2,6 +2,7 @@ import { Injectable, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { TipPoolDto } from './Dto/tipPool.dto';
 import { WorkSessionStatus } from '@prisma/client';
+import { start } from 'repl';
 
 function getDayRange(date: Date) {
   const start = new Date(date);
@@ -131,5 +132,50 @@ export class TipPoolService {
       amount: dist.amount,
       totalPoolAmount: dist.tipPool.totalAmount,
     }));
+  }
+
+  async getMyTipSummary(userId: string) {
+    const now = new Date();
+    const startOfToday = new Date(now);
+    startOfToday.setHours(0, 0, 0, 0);
+
+    const startOfWeek = new Date(startOfToday);
+    startOfWeek.setDate(startOfWeek.getDate() - startOfWeek.getDay());
+
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+
+    const [today, thisWeek, thisMonth, total] = await Promise.all([
+      this.prisma.tipDistribution.aggregate({
+        where: {
+          userId,
+          tipPool: { date: { gte: startOfToday } },
+        },
+        _sum: { amount: true },
+      }),
+      this.prisma.tipDistribution.aggregate({
+        where: {
+          userId,
+          tipPool: { date: { gte: startOfWeek } },
+        },
+        _sum: { amount: true },
+      }),
+      this.prisma.tipDistribution.aggregate({
+        where: {
+          userId,
+          tipPool: { date: { gte: startOfMonth } },
+        },
+        _sum: { amount: true },
+      }),
+      this.prisma.tipDistribution.aggregate({
+        where: { userId },
+        _sum: { amount: true },
+      }),
+    ]);
+    return {
+      today: today._sum.amount || 0,
+      thisWeek: thisWeek._sum.amount || 0,
+      thisMonth: thisMonth._sum.amount || 0,
+      total: total._sum.amount || 0,
+    };
   }
 }

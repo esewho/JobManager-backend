@@ -21,4 +21,9 @@ export class WorkSessionsController {
   async getMySessions(@User('userId') userId: string) {
     return await this.workSessionsService.getSessionsByUser(userId);
   }
+
+  @Get('me-summary')
+  async getMySummary(@User('userId') userId: string) {
+    return await this.workSessionsService.getMySummary(userId);
+  }
 }

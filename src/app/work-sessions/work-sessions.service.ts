@@ -7,9 +7,23 @@ import {
 } from '@nestjs/common';
 import { WorkSessionDto } from './Dto/work-session.dto';
 
+function startOfDayUTC(date: Date) {
+  return new Date(
+    Date.UTC(
+      date.getUTCFullYear(),
+      date.getUTCMonth(),
+      date.getUTCDate(),
+      0,
+      0,
+      0,
+    ),
+  );
+}
+
 @Injectable()
 export class WorkSessionsService {
   constructor(private readonly prisma: PrismaService) {}
+
   async checkIn(userId: string): Promise<WorkSessionDto> {
     const now = new Date();
     const user = await this.prisma.user.findUnique({
@@ -108,5 +122,94 @@ export class WorkSessionsService {
         status: session.status,
       };
     });
+  }
+
+  async getMySummary(userId: string) {
+    const now = new Date();
+
+    const startToday = startOfDayUTC(now);
+
+    const startWeek = new Date(startToday);
+    startWeek.setUTCDate(startWeek.getUTCDate() - startWeek.getUTCDay());
+
+    const startMonth = new Date(
+      Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1),
+    );
+
+    const [todayHours, weekHours, monthHours, todayTips, weekTips, monthTips] =
+      await Promise.all([
+        this.prisma.workSession.aggregate({
+          where: {
+            userId,
+            status: WorkSessionStatus.CLOSED,
+            checkIn: { gte: startToday },
+          },
+          _sum: {
+            totalMinutes: true,
+            extraMinutes: true,
+          },
+        }),
+        this.prisma.workSession.aggregate({
+          where: {
+            userId,
+            status: WorkSessionStatus.CLOSED,
+            checkIn: { gte: startWeek },
+          },
+          _sum: {
+            totalMinutes: true,
+            extraMinutes: true,
+          },
+        }),
+        this.prisma.workSession.aggregate({
+          where: {
+            userId,
+            status: WorkSessionStatus.CLOSED,
+            checkIn: { gte: startMonth },
+          },
+          _sum: {
+            totalMinutes: true,
+            extraMinutes: true,
+          },
+        }),
+        this.prisma.tipDistribution.aggregate({
+          where: {
+            userId,
+            tipPool: { date: { gte: startToday } },
+          },
+          _sum: { amount: true },
+        }),
+        this.prisma.tipDistribution.aggregate({
+          where: {
+            userId,
+            tipPool: { date: { gte: startWeek } },
+          },
+          _sum: { amount: true },
+        }),
+        this.prisma.tipDistribution.aggregate({
+          where: {
+            userId,
+            tipPool: { date: { gte: startMonth } },
+          },
+          _sum: { amount: true },
+        }),
+      ]);
+
+    return {
+      today: {
+        workedMinutes: todayHours._sum.totalMinutes ?? 0,
+        extraMinutes: todayHours._sum.extraMinutes ?? 0,
+        tips: todayTips._sum.amount ?? 0,
+      },
+      thisWeek: {
+        workedMinutes: weekHours._sum.totalMinutes ?? 0,
+        extraMinutes: weekHours._sum.extraMinutes ?? 0,
+        tips: weekTips._sum.amount ?? 0,
+      },
+      thisMonth: {
+        workedMinutes: monthHours._sum.totalMinutes ?? 0,
+        extraMinutes: monthHours._sum.extraMinutes ?? 0,
+        tips: monthTips._sum.amount ?? 0,
+      },
+    };
   }
 }

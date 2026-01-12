@@ -22,4 +22,10 @@ export class TipPoolController {
   async getMyDailyTips(@User('userId') userId: string) {
     return await this.tipPoolService.getMyDailyTips(userId);
   }
+
+  @Get('summary-tips')
+  @UseGuards(JwtAuthGuard)
+  async getMyTipSummary(@User('userId') userId: string) {
+    return await this.tipPoolService.getMyTipSummary(userId);
+  }
 }

@@ -62,4 +62,28 @@ export class AdminService {
       data: { shift },
     });
   }
+
+  async getAllWorkSessions() {
+    return await this.prisma.workSession.findMany({
+      select: {
+        id: true,
+        userId: true,
+        checkIn: true,
+        checkOut: true,
+        status: true,
+        shift: true,
+      },
+    });
+  }
+
+  async getAllTipsPools() {
+    return await this.prisma.tipPool.findMany({
+      select: {
+        distributions: true,
+        date: true,
+        shift: true,
+        totalAmount: true,
+      },
+    });
+  }
 }

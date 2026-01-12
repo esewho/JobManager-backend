@@ -63,7 +63,7 @@ model WorkSession{
 model TipPool{
   id String @id @default(cuid())
   totalAmount Int
-  date DateTime @unique
+  date DateTime 
   shift WorkShift
   distributions TipDistribution[]
   createdAt DateTime @default(now())
