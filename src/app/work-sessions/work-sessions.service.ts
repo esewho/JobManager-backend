@@ -244,8 +244,8 @@ export class WorkSessionsService {
       };
     }
     return {
-      checkIn: session.checkIn || null,
-      checkOut: session.checkOut || null,
+      checkIn: session.checkIn ?? null,
+      checkOut: session.checkOut ?? null,
       totalMinutes: session.totalMinutes,
       extraMinutes: session.extraMinutes,
       status: session.status,
