@@ -26,4 +26,9 @@ export class WorkSessionsController {
   async getMySummary(@User('userId') userId: string) {
     return await this.workSessionsService.getMySummary(userId);
   }
+
+  @Get('me/today')
+  async getTodaySession(@User('userId') userId: string) {
+    return await this.workSessionsService.getTodaySession(userId);
+  }
 }

@@ -19,9 +19,7 @@ export class AuthService {
     private readonly prisma: PrismaService,
     private jwt: JwtService,
   ) {}
-  async register(
-    dto: RegisterDto,
-  ): Promise<{ accessToken: string; user: SafeUser }> {
+  async register(dto: RegisterDto): Promise<{ accessToken: string }> {
     const existingUser = await this.prisma.user.findUnique({
       where: {
         username: dto.username,
@@ -55,11 +53,10 @@ export class AuthService {
         role: user.role,
         username: dto.username,
       }),
-      user,
     };
   }
 
-  async login(dto: LoginDto): Promise<{ accessToken: string; user: SafeUser }> {
+  async login(dto: LoginDto): Promise<{ accessToken: string }> {
     const userWithPassword = await this.prisma.user.findUnique({
       where: {
         username: dto.username,
@@ -96,7 +93,6 @@ export class AuthService {
         role: safeUser.role,
         username: safeUser.username,
       }),
-      user: safeUser,
     };
   }
 

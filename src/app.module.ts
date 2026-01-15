@@ -7,6 +7,7 @@ import { AuthModule } from './app/auth/auth.module';
 import { WorkSessionsModule } from './app/work-sessions/work-sessions.module';
 import { TipPoolModule } from './app/tip-pool/tip-pool.module';
 import { AdminModule } from './app/admin/admin.module';
+import { UserDataModule } from './user/user-data.module';
 
 @Module({
   imports: [
@@ -16,6 +17,7 @@ import { AdminModule } from './app/admin/admin.module';
     WorkSessionsModule,
     TipPoolModule,
     AdminModule,
+    UserDataModule,
   ],
   controllers: [AppController],
   providers: [AppService],

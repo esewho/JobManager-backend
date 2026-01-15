@@ -59,6 +59,7 @@ export class WorkSessionsService {
       totalMinutes: session.totalMinutes,
       extraMinutes: session.extraMinutes,
       status: session.status,
+      shift: session.shift,
     };
   }
 
@@ -104,6 +105,7 @@ export class WorkSessionsService {
       totalMinutes: updatedSession.totalMinutes,
       extraMinutes: updatedSession.extraMinutes,
       status: updatedSession.status,
+      shift: updatedSession.shift,
     };
   }
 
@@ -120,6 +122,7 @@ export class WorkSessionsService {
         totalMinutes: session.totalMinutes,
         extraMinutes: session.extraMinutes,
         status: session.status,
+        shift: session.shift,
       };
     });
   }
@@ -210,6 +213,43 @@ export class WorkSessionsService {
         extraMinutes: monthHours._sum.extraMinutes ?? 0,
         tips: monthTips._sum.amount ?? 0,
       },
+    };
+  }
+
+  async getTodaySession(userId: string): Promise<WorkSessionDto | null> {
+    const now = new Date();
+    const start = new Date(now);
+    start.setHours(0, 0, 0, 0);
+    const end = new Date(start);
+    end.setHours(23, 59, 59, 999);
+
+    const session = await this.prisma.workSession.findFirst({
+      where: {
+        userId,
+        checkIn: {
+          gte: start,
+          lte: end,
+        },
+      },
+      orderBy: { checkIn: 'desc' },
+    });
+    if (!session) {
+      return {
+        checkIn: null,
+        checkOut: null,
+        totalMinutes: 0,
+        extraMinutes: 0,
+        status: WorkSessionStatus.CLOSED,
+        shift: null,
+      };
+    }
+    return {
+      checkIn: session.checkIn || null,
+      checkOut: session.checkOut || null,
+      totalMinutes: session.totalMinutes,
+      extraMinutes: session.extraMinutes,
+      status: session.status,
+      shift: session.shift,
     };
   }
 }
