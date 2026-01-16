@@ -6,6 +6,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { WorkSessionDto } from './Dto/work-session.dto';
+import { WorkHistoryDto } from './Dto/work-history.dto';
 
 function startOfDayUTC(date: Date) {
   return new Date(
@@ -17,6 +18,22 @@ function startOfDayUTC(date: Date) {
       0,
       0,
     ),
+  );
+}
+function startOfWeekUTC(date: Date) {
+  const day = date.getUTCDay(); // 0 = domingo, 1 = lunes...
+  const diff = day === 0 ? -6 : 1 - day;
+
+  const start = new Date(date);
+  start.setUTCDate(date.getUTCDate() + diff);
+  start.setUTCHours(0, 0, 0, 0);
+
+  return start;
+}
+
+function startOfMonthUTC(date: Date) {
+  return new Date(
+    Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), 1, 0, 0, 0),
   );
 }
 
@@ -199,16 +216,19 @@ export class WorkSessionsService {
 
     return {
       today: {
+        date: startToday,
         workedMinutes: todayHours._sum.totalMinutes ?? 0,
         extraMinutes: todayHours._sum.extraMinutes ?? 0,
         tips: todayTips._sum.amount ?? 0,
       },
       thisWeek: {
+        date: startWeek,
         workedMinutes: weekHours._sum.totalMinutes ?? 0,
         extraMinutes: weekHours._sum.extraMinutes ?? 0,
         tips: weekTips._sum.amount ?? 0,
       },
       thisMonth: {
+        date: startMonth,
         workedMinutes: monthHours._sum.totalMinutes ?? 0,
         extraMinutes: monthHours._sum.extraMinutes ?? 0,
         tips: monthTips._sum.amount ?? 0,
@@ -251,5 +271,95 @@ export class WorkSessionsService {
       status: session.status,
       shift: session.shift,
     };
+  }
+
+  async getMyHistory(
+    userId: string,
+    period: 'today' | 'week' | 'month',
+  ): Promise<WorkHistoryDto[]> {
+    const now = new Date();
+    let from: Date;
+
+    switch (period) {
+      case 'today':
+        from = startOfDayUTC(now);
+        break;
+      case 'week':
+        from = startOfWeekUTC(now);
+        break;
+      case 'month':
+        from = startOfMonthUTC(now);
+        break;
+      default:
+        throw new BadRequestException('Invalid period');
+    }
+
+    const sessions = await this.prisma.workSession.findMany({
+      where: {
+        userId,
+        status: WorkSessionStatus.CLOSED,
+        checkIn: { gte: from },
+      },
+    });
+
+    const tips = await this.prisma.tipDistribution.findMany({
+      where: {
+        userId,
+        tipPool: {
+          date: { gte: from },
+        },
+      },
+      include: {
+        tipPool: true,
+      },
+    });
+
+    const history = new Map<string, WorkHistoryDto>();
+
+    // sesiones → tiempo
+    for (const s of sessions) {
+      const dayKey = startOfDayUTC(s.checkIn).toISOString();
+
+      if (!history.has(dayKey)) {
+        history.set(dayKey, {
+          checkIn: now,
+          checkOut: null,
+          id: sessions[0].id,
+          shift: null,
+          date: startOfDayUTC(s.checkIn),
+          totalMinutes: 0,
+          extraMinutes: 0,
+          tips: 0,
+        });
+      }
+
+      const entry = history.get(dayKey)!;
+      entry.totalMinutes += s.totalMinutes;
+      entry.extraMinutes += s.extraMinutes;
+    }
+
+    // tips → dinero
+    for (const t of tips) {
+      const dayKey = startOfDayUTC(t.tipPool.date).toISOString();
+
+      if (!history.has(dayKey)) {
+        history.set(dayKey, {
+          checkIn: now,
+          checkOut: null,
+          id: '',
+          shift: null,
+          date: startOfDayUTC(t.tipPool.date),
+          totalMinutes: 0,
+          extraMinutes: 0,
+          tips: 0,
+        });
+      }
+
+      history.get(dayKey)!.tips += t.amount;
+    }
+
+    return Array.from(history.values()).sort(
+      (a, b) => b.date.getTime() - a.date.getTime(),
+    );
   }
 }
