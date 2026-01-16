@@ -60,6 +60,25 @@ export class WorkSessionsService {
       );
     }
 
+    const start = new Date(now);
+    start.setHours(0, 0, 0, 0);
+
+    const end = new Date(start);
+    end.setHours(23, 59, 59, 999);
+
+    const todaySession = await this.prisma.workSession.count({
+      where: {
+        userId: user.id,
+        checkIn: {
+          gte: start,
+          lte: end,
+        },
+      },
+    });
+    if (todaySession >= 2) {
+      throw new BadRequestException('User has already checked in twice today');
+    }
+
     const session = await this.prisma.workSession.create({
       data: {
         userId: user.id,

@@ -6,6 +6,13 @@ import {
 import { PrismaService } from 'src/prisma/prisma.service';
 import { WorkSessionStatus, WorkShift } from '@prisma/client';
 
+function getDayRange(date: Date) {
+  const start = new Date(date);
+  start.setHours(0, 0, 0, 0);
+  const end = new Date(date);
+  end.setHours(23, 59, 59, 999);
+  return { start, end };
+}
 @Injectable()
 export class AdminService {
   constructor(private readonly prisma: PrismaService) {}
@@ -56,6 +63,25 @@ export class AdminService {
     }
     if (session.status !== WorkSessionStatus.CLOSED) {
       throw new BadRequestException('Only closed sessions can be updated');
+    }
+
+    if (session.shift) {
+      throw new BadRequestException('Shift has already been assigned');
+    }
+
+    const { start, end } = getDayRange(session.checkIn);
+
+    const existingSameShift = await this.prisma.workSession.findFirst({
+      where: {
+        userId: session.userId,
+        shift,
+        checkIn: { gte: start, lte: end },
+      },
+    });
+    if (existingSameShift) {
+      throw new BadRequestException(
+        `User already has a ${shift} shift for this day`,
+      );
     }
     return await this.prisma.workSession.update({
       where: { id: sessionId },
