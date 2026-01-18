@@ -8,6 +8,7 @@ import { WorkSessionsModule } from './app/work-sessions/work-sessions.module';
 import { TipPoolModule } from './app/tip-pool/tip-pool.module';
 import { AdminModule } from './app/admin/admin.module';
 import { UserDataModule } from './user/user-data.module';
+import { WeeklyHistoryModule } from './app/weekly-history/weekly-history.module';
 
 @Module({
   imports: [
@@ -18,6 +19,7 @@ import { UserDataModule } from './user/user-data.module';
     TipPoolModule,
     AdminModule,
     UserDataModule,
+    WeeklyHistoryModule,
   ],
   controllers: [AppController],
   providers: [AppService],
