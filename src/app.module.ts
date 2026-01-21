@@ -9,6 +9,7 @@ import { TipPoolModule } from './app/tip-pool/tip-pool.module';
 import { AdminModule } from './app/admin/admin.module';
 import { UserDataModule } from './user/user-data.module';
 import { WeeklyHistoryModule } from './app/weekly-history/weekly-history.module';
+import { MonthlyHistoryModule } from './app/monthlyHistory/monthlyHistory.module';
 
 @Module({
   imports: [
@@ -20,6 +21,7 @@ import { WeeklyHistoryModule } from './app/weekly-history/weekly-history.module'
     AdminModule,
     UserDataModule,
     WeeklyHistoryModule,
+    MonthlyHistoryModule,
   ],
   controllers: [AppController],
   providers: [AppService],

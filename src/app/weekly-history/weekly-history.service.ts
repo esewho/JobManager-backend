@@ -2,7 +2,6 @@ import { Injectable } from '@nestjs/common';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { WeeklyHistoryDto } from './Dto/weeklyHistory.dto';
 import { WorkSessionStatus } from '@prisma/client';
-
 function startOfDay(date: Date): Date {
   return new Date(
     Date.UTC(
@@ -16,7 +15,6 @@ function startOfDay(date: Date): Date {
     ),
   );
 }
-
 function startOfWeek(date: Date): Date {
   const d = new Date(date);
   const day = d.getUTCDay();
@@ -32,7 +30,10 @@ export class WeeklyHistoryService {
 
   async getWeeklyHistory(userId: string): Promise<WeeklyHistoryDto[]> {
     const now = new Date();
+
+    // 🔑 CLAVE: mover la fecha base
     const weekStart = startOfWeek(now);
+
     const weekEnd = new Date(weekStart);
     weekEnd.setUTCDate(weekEnd.getUTCDate() + 6);
     weekEnd.setUTCHours(23, 59, 59, 999);
