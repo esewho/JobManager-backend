@@ -169,6 +169,7 @@ export class MonthlyHistoryService {
           extraMinutes: daySessions.reduce((acc, s) => acc + s.extraMinutes, 0),
           tips: dayTips.reduce((acc, t) => acc + t.amount, 0),
           sessions: daySessions.map((s) => ({
+            sessionId: s.id,
             checkIn: s.checkIn,
             checkOut: s.checkOut,
             shift: s.shift,
