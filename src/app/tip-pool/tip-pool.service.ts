@@ -1,7 +1,7 @@
 import { Injectable, BadRequestException } from '@nestjs/common';
-import { PrismaService } from '../../prisma/prisma.service';
 import { TipPoolDto } from './Dto/tipPool.dto';
 import { WorkSessionStatus } from '@prisma/client';
+import { prisma } from 'src/prisma/prisma';
 
 function getDayRange(date: Date) {
   const start = new Date(date);
@@ -13,13 +13,12 @@ function getDayRange(date: Date) {
 
 @Injectable()
 export class TipPoolService {
-  constructor(private readonly prisma: PrismaService) {}
 
   async createTipPool(dto: TipPoolDto) {
     const date = new Date(dto.date);
     date.setHours(0, 0, 0, 0);
 
-    const existingPool = await this.prisma.tipPool.findUnique({
+    const existingPool = await prisma.tipPool.findUnique({
       where: { date_shift: { date, shift: dto.shift } },
     });
     if (existingPool) {
@@ -28,7 +27,7 @@ export class TipPoolService {
 
     const { start, end } = getDayRange(date);
 
-    const result = await this.prisma.$transaction(async (tx) => {
+    const result = await prisma.$transaction(async (tx) => {
       const openSessions = await tx.workSession.findMany({
         where: {
           status: WorkSessionStatus.OPEN,
@@ -117,7 +116,7 @@ export class TipPoolService {
   }
 
   async getMyDailyTips(userId: string) {
-    const distributions = await this.prisma.tipDistribution.findMany({
+    const distributions = await prisma.tipDistribution.findMany({
       where: { userId },
       include: {
         tipPool: {
@@ -144,28 +143,28 @@ export class TipPoolService {
     const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
 
     const [today, thisWeek, thisMonth, total] = await Promise.all([
-      this.prisma.tipDistribution.aggregate({
+      prisma.tipDistribution.aggregate({
         where: {
           userId,
           tipPool: { date: { gte: startOfToday } },
         },
         _sum: { amount: true },
       }),
-      this.prisma.tipDistribution.aggregate({
+      prisma.tipDistribution.aggregate({
         where: {
           userId,
           tipPool: { date: { gte: startOfWeek } },
         },
         _sum: { amount: true },
       }),
-      this.prisma.tipDistribution.aggregate({
+      prisma.tipDistribution.aggregate({
         where: {
           userId,
           tipPool: { date: { gte: startOfMonth } },
         },
         _sum: { amount: true },
       }),
-      this.prisma.tipDistribution.aggregate({
+     prisma.tipDistribution.aggregate({
         where: { userId },
         _sum: { amount: true },
       }),

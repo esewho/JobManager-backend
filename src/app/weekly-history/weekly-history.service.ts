@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
-import { PrismaService } from 'src/prisma/prisma.service';
 import { WeeklyHistoryDto } from './Dto/weeklyHistory.dto';
 import { WorkSessionStatus } from '@prisma/client';
+import { prisma } from 'src/prisma/prisma';
 function startOfDay(date: Date): Date {
   return new Date(
     Date.UTC(
@@ -26,7 +26,6 @@ function startOfWeek(date: Date): Date {
 
 @Injectable()
 export class WeeklyHistoryService {
-  constructor(private readonly prisma: PrismaService) {}
 
   async getWeeklyHistory(userId: string): Promise<WeeklyHistoryDto[]> {
     const now = new Date();
@@ -38,7 +37,7 @@ export class WeeklyHistoryService {
     weekEnd.setUTCDate(weekEnd.getUTCDate() + 6);
     weekEnd.setUTCHours(23, 59, 59, 999);
 
-    const sessions = await this.prisma.workSession.findMany({
+    const sessions = await prisma.workSession.findMany({
       where: {
         userId,
         status: WorkSessionStatus.CLOSED,
@@ -51,7 +50,7 @@ export class WeeklyHistoryService {
         checkIn: 'asc',
       },
     });
-    const tips = await this.prisma.tipDistribution.findMany({
+    const tips = await prisma.tipDistribution.findMany({
       where: {
         userId,
         tipPool: {

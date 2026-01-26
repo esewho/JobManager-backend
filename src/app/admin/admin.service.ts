@@ -3,8 +3,8 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { PrismaService } from 'src/prisma/prisma.service';
 import { WorkSessionStatus, WorkShift } from '@prisma/client';
+import { prisma} from '../../prisma/prisma'
 
 function getDayRange(date: Date) {
   const start = new Date(date);
@@ -15,16 +15,15 @@ function getDayRange(date: Date) {
 }
 @Injectable()
 export class AdminService {
-  constructor(private readonly prisma: PrismaService) {}
   async setActiveOrDeactivateUser(userId: string, isActive: boolean) {
-    const user = await this.prisma.user.findUnique({
+    const user = await prisma.user.findUnique({
       where: { id: userId },
       select: { id: true },
     });
     if (!user) {
       throw new NotFoundException('User not found');
     }
-    await this.prisma.user.update({
+    await prisma.user.update({
       where: { id: userId },
       data: { active: isActive },
     });
@@ -34,7 +33,7 @@ export class AdminService {
   }
 
   async getWorkingUsers() {
-    const sessions = await this.prisma.workSession.findMany({
+    const sessions = await prisma.workSession.findMany({
       where: { status: WorkSessionStatus.OPEN },
       include: {
         user: {
@@ -55,7 +54,7 @@ export class AdminService {
   }
 
   async updateWorkSessionShift(sessionId: string, shift: WorkShift) {
-    const session = await this.prisma.workSession.findUnique({
+    const session = await prisma.workSession.findUnique({
       where: { id: sessionId },
     });
     if (!session) {
@@ -71,7 +70,7 @@ export class AdminService {
 
     const { start, end } = getDayRange(session.checkIn);
 
-    const existingSameShift = await this.prisma.workSession.findFirst({
+    const existingSameShift = await prisma.workSession.findFirst({
       where: {
         userId: session.userId,
         shift,
@@ -83,14 +82,14 @@ export class AdminService {
         `User already has a ${shift} shift for this day`,
       );
     }
-    return await this.prisma.workSession.update({
+    return await prisma.workSession.update({
       where: { id: sessionId },
       data: { shift },
     });
   }
 
   async getAllWorkSessions() {
-    return await this.prisma.workSession.findMany({
+    return await prisma.workSession.findMany({
       select: {
         id: true,
         userId: true,
@@ -103,7 +102,7 @@ export class AdminService {
   }
 
   async getAllTipsPools() {
-    return await this.prisma.tipPool.findMany({
+    return await prisma.tipPool.findMany({
       select: {
         distributions: true,
         date: true,
