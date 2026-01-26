@@ -3,8 +3,11 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { WorkSessionStatus, WorkShift } from '@prisma/client';
+import { Role, WorkSessionStatus, WorkShift } from '@prisma/client';
 import { prisma } from '../../prisma/prisma';
+import { CreateUserDto } from './Dto/createUser.dto';
+import * as bcrypt from 'bcrypt';
+import { UserDto } from 'src/user/Dto/user-dto';
 
 function getDayRange(date: Date) {
   const start = new Date(date);
@@ -117,7 +120,7 @@ export class AdminService {
     workspaceId: string,
     adminUserId: string,
   ) {
-    const isAdminInWorkspace = await this.prisma.userWorkspace.findFirst({
+    const isAdminInWorkspace = await prisma.userWorkspace.findFirst({
       where: {
         userId: adminUserId,
         workspaceId: workspaceId,
@@ -129,7 +132,7 @@ export class AdminService {
         'Only admins can create employees in this workspace',
       );
     }
-    const existingUser = await this.prisma.userWorkspace.findFirst({
+    const existingUser = await prisma.userWorkspace.findFirst({
       where: {
         user: {
           username: dto.username,
@@ -141,7 +144,7 @@ export class AdminService {
       throw new BadRequestException('User already exists in this workspace');
     }
 
-    const workspace = await this.prisma.workspace.findUnique({
+    const workspace = await prisma.workspace.findUnique({
       where: {
         id: workspaceId,
       },
@@ -151,7 +154,7 @@ export class AdminService {
     }
 
     const hashedPassword = await bcrypt.hash(dto.password, 10);
-    const user = await this.prisma.user.create({
+    const user = await prisma.user.create({
       data: {
         username: dto.username,
         password: hashedPassword,
@@ -159,7 +162,7 @@ export class AdminService {
         active: dto.active,
       },
     });
-    await this.prisma.userWorkspace.create({
+    await prisma.userWorkspace.create({
       data: {
         userId: user.id,
         workspaceId: workspaceId,

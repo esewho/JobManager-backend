@@ -10,8 +10,6 @@ import { prisma } from 'src/prisma/prisma';
 
 @Injectable()
 export class WorkspaceService {
-
-
   async createWorkspace(dto: WorkspaceDto, userId: string) {
     const user = await prisma.user.findUnique({
       where: {
@@ -96,7 +94,7 @@ export class WorkspaceService {
   }
 
   async getWorkspaceById(workspaceId: string) {
-    const workspace = await this.prisma.workspace.findUnique({
+    const workspace = await prisma.workspace.findUnique({
       where: { id: workspaceId },
       select: {
         id: true,
