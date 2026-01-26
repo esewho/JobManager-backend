@@ -101,21 +101,11 @@ export class AuthService {
     }
     const { password, ...safeUser } = userWithPassword;
 
-    const userWorkspace = await this.prisma.userWorkspace.findFirst({
-      where: {
-        userId: safeUser.id,
-      },
-    });
-    if (!userWorkspace) {
-      throw new BadRequestException('User workspace not found');
-    }
-
     return {
       accessToken: await this.signToken({
         sub: safeUser.id,
-        role: userWorkspace.role,
+        role: safeUser.role,
         username: safeUser.username,
-        workspaceId: userWorkspace.workspaceId,
       }),
     };
   }

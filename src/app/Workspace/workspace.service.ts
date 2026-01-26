@@ -17,10 +17,12 @@ export class WorkspaceService {
         id: userId,
       },
     });
+    console.log(user);
     if (user?.role !== Role.ADMIN) {
       throw new Error('Only admins can create workspaces');
     }
-    const existingWorkspace = await this.prisma.workspace.findUnique({
+
+    const existingWorkspace = await this.prisma.workspace.findFirst({
       where: {
         name: dto.name,
       },

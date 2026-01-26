@@ -8,7 +8,10 @@ export class WorkspaceGuard implements CanActivate {
 
   async canActivate(ctx: ExecutionContext): Promise<boolean> {
     const req = ctx.switchToHttp().getRequest();
-    const { userId, workspaceId } = req.user;
+    const { userId } = req.user;
+    const workspaceId = req.params.workspaceId ?? req.user.workspaceId;
+
+    if (!workspaceId) return false;
 
     if (!workspaceId) {
       return false;

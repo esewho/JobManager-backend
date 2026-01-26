@@ -47,7 +47,7 @@ model User {
 
 model Workspace{
   id String @id @default(cuid())
-  name String @unique
+  name String 
   workSessions WorkSession[]
   imageUrl String?
   users UserWorkspace[]

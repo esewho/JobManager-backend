@@ -1,10 +1,4 @@
-import {
-  IsNumber,
-  IsString,
-  IsUrl,
-  MaxLength,
-  MinLength,
-} from 'class-validator';
+import { IsString, IsUrl, MaxLength, MinLength } from 'class-validator';
 
 export class WorkspaceDto {
   @IsString()
@@ -12,5 +6,6 @@ export class WorkspaceDto {
   @MaxLength(50)
   name!: string;
   @IsUrl()
+  @IsString()
   imageUrl?: string;
 }
