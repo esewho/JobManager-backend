@@ -1,10 +1,10 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
-import { PrismaService } from 'src/prisma/prisma.service';
 import { RegisterDto } from './authDto/register.dto';
 import { LoginDto } from './authDto/login.dto';
 import * as bcrypt from 'bcrypt';
 import { Role } from '@prisma/client';
+import { prisma } from '../../prisma/prisma';
 
 type SafeUser = {
   id: string;
@@ -16,11 +16,10 @@ type SafeUser = {
 @Injectable()
 export class AuthService {
   constructor(
-    private readonly prisma: PrismaService,
     private jwt: JwtService,
   ) {}
   async register(dto: RegisterDto): Promise<{ accessToken: string }> {
-    const existingUser = await this.prisma.user.findUnique({
+    const existingUser = await prisma.user.findUnique({
       where: {
         username: dto.username,
       },
@@ -30,14 +29,14 @@ export class AuthService {
       throw new BadRequestException('User already exists');
     }
 
-    const workspace = await this.prisma.workspace.findFirst({});
+    const workspace = await prisma.workspace.findFirst({});
     if (!workspace) {
       throw new BadRequestException('No workspace available');
     }
 
     const hashedPassword = await bcrypt.hash(dto.password, 10);
 
-    const user = await this.prisma.user.create({
+    const user = await prisma.user.create({
       data: {
         username: dto.username,
         password: hashedPassword,
@@ -53,7 +52,7 @@ export class AuthService {
       },
     });
 
-    await this.prisma.userWorkspace.create({
+    await prisma.userWorkspace.create({
       data: {
         userId: user.id,
         workspaceId: workspace.id,
@@ -72,7 +71,7 @@ export class AuthService {
   }
 
   async login(dto: LoginDto): Promise<{ accessToken: string }> {
-    const userWithPassword = await this.prisma.user.findUnique({
+    const userWithPassword = await prisma.user.findUnique({
       where: {
         username: dto.username,
       },
@@ -113,7 +112,7 @@ export class AuthService {
   async registerAdmin(
     dto: RegisterDto,
   ): Promise<{ accessToken: string; user: SafeUser }> {
-    const adminCount = await this.prisma.user.count({
+    const adminCount = await prisma.user.count({
       where: {
         role: Role.ADMIN,
       },
@@ -121,7 +120,7 @@ export class AuthService {
     if (adminCount > 0) {
       throw new BadRequestException('Admin registration is restricted');
     }
-    const existingUser = await this.prisma.user.findUnique({
+    const existingUser = await prisma.user.findUnique({
       where: {
         username: dto.username,
       },
@@ -133,7 +132,7 @@ export class AuthService {
 
     const hashedPassword = await bcrypt.hash(dto.password, 10);
 
-    const user = await this.prisma.user.create({
+    const user = await prisma.user.create({
       data: {
         username: dto.username,
         password: hashedPassword,

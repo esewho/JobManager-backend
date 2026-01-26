@@ -1,5 +1,4 @@
 import { WorkSessionStatus } from '@prisma/client';
-import { PrismaService } from './../../prisma/prisma.service';
 import {
   BadRequestException,
   Injectable,
@@ -7,6 +6,7 @@ import {
 } from '@nestjs/common';
 import { WorkSessionDto } from './Dto/work-session.dto';
 import { WorkHistoryDto } from './Dto/work-history.dto';
+import { prisma } from 'src/prisma/prisma';
 
 function startOfDayUTC(date: Date) {
   return new Date(
@@ -39,11 +39,10 @@ function startOfMonthUTC(date: Date) {
 
 @Injectable()
 export class WorkSessionsService {
-  constructor(private readonly prisma: PrismaService) {}
 
   async checkIn(userId: string, workspaceId: string): Promise<WorkSessionDto> {
     const now = new Date();
-    const user = await this.prisma.userWorkspace.findUnique({
+    const user = await prisma.userWorkspace.findUnique({
       where: { userId_workspaceId: { userId, workspaceId } },
       select: { id: true },
     });
@@ -51,7 +50,7 @@ export class WorkSessionsService {
       throw new NotFoundException('User not found');
     }
 
-    const openSession = await this.prisma.workSession.findFirst({
+    const openSession = await prisma.workSession.findFirst({
       where: {
         userId: user.id,
         workspaceId: workspaceId,
@@ -70,7 +69,7 @@ export class WorkSessionsService {
     const end = new Date(start);
     end.setHours(23, 59, 59, 999);
 
-    const todaySession = await this.prisma.workSession.count({
+    const todaySession = await prisma.workSession.count({
       where: {
         userId: user.id,
         workspaceId: workspaceId,
@@ -84,7 +83,7 @@ export class WorkSessionsService {
       throw new BadRequestException('User has already checked in twice today');
     }
 
-    const session = await this.prisma.workSession.create({
+    const session = await prisma.workSession.create({
       data: {
         userId: user.id,
         workspaceId: workspaceId,
@@ -108,7 +107,7 @@ export class WorkSessionsService {
   async checkOut(userId: string): Promise<WorkSessionDto> {
     const WORKDAY_MINUTES = 8 * 60;
     const now = new Date();
-    const user = await this.prisma.user.findUnique({
+    const user = await prisma.user.findUnique({
       where: { id: userId },
       select: { id: true },
     });
@@ -116,7 +115,7 @@ export class WorkSessionsService {
       throw new NotFoundException('User not found');
     }
 
-    const openSession = await this.prisma.workSession.findFirst({
+    const openSession = await prisma.workSession.findFirst({
       where: { userId: user.id, status: WorkSessionStatus.OPEN },
     });
     if (!openSession) {
@@ -130,7 +129,7 @@ export class WorkSessionsService {
     const diffMins = Math.max(Math.floor(diffMs / 60000), 0);
     const extraTime = Math.max(diffMins - WORKDAY_MINUTES, 0);
 
-    const updatedSession = await this.prisma.workSession.update({
+    const updatedSession = await prisma.workSession.update({
       where: { id: openSession.id },
       data: {
         checkOut: now,
@@ -152,7 +151,7 @@ export class WorkSessionsService {
   }
 
   async getSessionsByUser(userId: string): Promise<WorkSessionDto[]> {
-    const sessions = await this.prisma.workSession.findMany({
+    const sessions = await prisma.workSession.findMany({
       where: { userId },
       orderBy: { checkIn: 'desc' },
     });
@@ -183,7 +182,7 @@ export class WorkSessionsService {
 
     const [todayHours, weekHours, monthHours, todayTips, weekTips, monthTips] =
       await Promise.all([
-        this.prisma.workSession.aggregate({
+        prisma.workSession.aggregate({
           where: {
             userId,
             status: WorkSessionStatus.CLOSED,
@@ -194,7 +193,7 @@ export class WorkSessionsService {
             extraMinutes: true,
           },
         }),
-        this.prisma.workSession.aggregate({
+        prisma.workSession.aggregate({
           where: {
             userId,
             status: WorkSessionStatus.CLOSED,
@@ -205,7 +204,7 @@ export class WorkSessionsService {
             extraMinutes: true,
           },
         }),
-        this.prisma.workSession.aggregate({
+       prisma.workSession.aggregate({
           where: {
             userId,
             status: WorkSessionStatus.CLOSED,
@@ -216,21 +215,21 @@ export class WorkSessionsService {
             extraMinutes: true,
           },
         }),
-        this.prisma.tipDistribution.aggregate({
+        prisma.tipDistribution.aggregate({
           where: {
             userId,
             tipPool: { date: { gte: startToday } },
           },
           _sum: { amount: true },
         }),
-        this.prisma.tipDistribution.aggregate({
+        prisma.tipDistribution.aggregate({
           where: {
             userId,
             tipPool: { date: { gte: startWeek } },
           },
           _sum: { amount: true },
         }),
-        this.prisma.tipDistribution.aggregate({
+        prisma.tipDistribution.aggregate({
           where: {
             userId,
             tipPool: { date: { gte: startMonth } },
@@ -268,7 +267,7 @@ export class WorkSessionsService {
     const end = new Date(start);
     end.setHours(23, 59, 59, 999);
 
-    const session = await this.prisma.workSession.findFirst({
+    const session = await prisma.workSession.findFirst({
       where: {
         userId,
         checkIn: {
@@ -319,7 +318,7 @@ export class WorkSessionsService {
         throw new BadRequestException('Invalid period');
     }
 
-    const sessions = await this.prisma.workSession.findMany({
+    const sessions = await prisma.workSession.findMany({
       where: {
         userId,
         status: WorkSessionStatus.CLOSED,
@@ -327,7 +326,7 @@ export class WorkSessionsService {
       },
     });
 
-    const tips = await this.prisma.tipDistribution.findMany({
+    const tips = await prisma.tipDistribution.findMany({
       where: {
         userId,
         tipPool: {

@@ -1,10 +1,9 @@
 import { Injectable } from '@nestjs/common';
-import { PrismaService } from 'src/prisma/prisma.service';
 import { MonthlyHistoryDto } from './Dto/monthlyHistory.dto';
 import { WorkSessionStatus } from '@prisma/client';
 import { WeekHistoryDto } from './Dto/weekHistory.dto';
 import { DayHistoryDto } from './Dto/dayHistory.dto';
-
+import { prisma } from '../../prisma/prisma';
 function startOfDayUTC(date: Date): Date {
   return new Date(
     Date.UTC(
@@ -30,10 +29,9 @@ function startOfWeekUTC(date: Date): Date {
 
 @Injectable()
 export class MonthlyHistoryService {
-  constructor(private prisma: PrismaService) {}
 
   async getMonths(userId: string): Promise<MonthlyHistoryDto[]> {
-    const sessions = await this.prisma.workSession.findMany({
+    const sessions = await prisma.workSession.findMany({
       where: {
         userId,
         status: WorkSessionStatus.CLOSED,
@@ -44,7 +42,7 @@ export class MonthlyHistoryService {
         extraMinutes: true,
       },
     });
-    const tips = await this.prisma.tipDistribution.findMany({
+    const tips = await prisma.tipDistribution.findMany({
       where: {
         userId,
       },
@@ -106,7 +104,7 @@ export class MonthlyHistoryService {
     const monthEnd = startOfDayUTC(new Date(Date.UTC(year, month, 0)));
     monthEnd.setUTCHours(23, 59, 59, 999);
 
-    const sessions = await this.prisma.workSession.findMany({
+    const sessions = await prisma.workSession.findMany({
       where: {
         userId,
         status: WorkSessionStatus.CLOSED,
@@ -118,7 +116,7 @@ export class MonthlyHistoryService {
       orderBy: { checkIn: 'asc' },
     });
 
-    const tips = await this.prisma.tipDistribution.findMany({
+    const tips = await prisma.tipDistribution.findMany({
       where: {
         userId,
         tipPool: {

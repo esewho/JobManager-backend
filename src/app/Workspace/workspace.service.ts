@@ -3,16 +3,17 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { PrismaService } from 'src/prisma/prisma.service';
+
 import { WorkspaceDto } from './Dto/workspace.dto';
 import { Role } from '@prisma/client';
+import { prisma } from 'src/prisma/prisma';
 
 @Injectable()
 export class WorkspaceService {
-  constructor(private readonly prisma: PrismaService) {}
+
 
   async createWorkspace(dto: WorkspaceDto, userId: string) {
-    const user = await this.prisma.user.findUnique({
+    const user = await prisma.user.findUnique({
       where: {
         id: userId,
       },
@@ -22,7 +23,7 @@ export class WorkspaceService {
       throw new Error('Only admins can create workspaces');
     }
 
-    const existingWorkspace = await this.prisma.workspace.findFirst({
+    const existingWorkspace = await prisma.workspace.findFirst({
       where: {
         name: dto.name,
       },
@@ -30,13 +31,13 @@ export class WorkspaceService {
     if (existingWorkspace) {
       throw new Error('Workspace already exists');
     }
-    const workspace = await this.prisma.workspace.create({
+    const workspace = await prisma.workspace.create({
       data: {
         name: dto.name,
         imageUrl: dto.imageUrl,
       },
     });
-    await this.prisma.userWorkspace.create({
+    await prisma.userWorkspace.create({
       data: {
         userId: userId,
         workspaceId: workspace.id,
@@ -51,7 +52,7 @@ export class WorkspaceService {
     dto: WorkspaceDto,
     userId: string,
   ) {
-    const userWorkspace = await this.prisma.userWorkspace.findFirst({
+    const userWorkspace = await prisma.userWorkspace.findFirst({
       where: {
         userId,
         workspaceId,
@@ -61,7 +62,7 @@ export class WorkspaceService {
       throw new Error('Only admins can update workspaces');
     }
 
-    const existingWorkspace = await this.prisma.workspace.findUnique({
+    const existingWorkspace = await prisma.workspace.findUnique({
       where: {
         id: workspaceId,
       },
@@ -69,7 +70,7 @@ export class WorkspaceService {
     if (!existingWorkspace) {
       throw new NotFoundException('Workspace not found');
     }
-    const workspace = await this.prisma.workspace.update({
+    const workspace = await prisma.workspace.update({
       where: {
         id: workspaceId,
       },
@@ -82,7 +83,7 @@ export class WorkspaceService {
   }
 
   async getAllWorkspaces(userId: string) {
-    const userWorkspace = await this.prisma.userWorkspace.findMany({
+    const userWorkspace = await prisma.userWorkspace.findMany({
       where: {
         userId,
       },
@@ -113,7 +114,7 @@ export class WorkspaceService {
   }
 
   async deleteWorkspace(workspaceId: string, userId: string) {
-    const userWorkspace = await this.prisma.userWorkspace.findFirst({
+    const userWorkspace = await prisma.userWorkspace.findFirst({
       where: {
         userId,
         workspaceId,
@@ -123,7 +124,7 @@ export class WorkspaceService {
       throw new ForbiddenException('Only admins can delete workspaces');
     }
 
-    const existingWorkspace = await this.prisma.workspace.findUnique({
+    const existingWorkspace = await prisma.workspace.findUnique({
       where: {
         id: workspaceId,
       },
@@ -132,7 +133,7 @@ export class WorkspaceService {
       throw new NotFoundException('Workspace not found');
     }
 
-    await this.prisma.workspace.delete({
+    await prisma.workspace.delete({
       where: {
         id: workspaceId,
       },
