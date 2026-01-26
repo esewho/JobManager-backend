@@ -8,8 +8,11 @@ import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 export class WorkSessionsController {
   constructor(private readonly workSessionsService: WorkSessionsService) {}
   @Post('check-in')
-  async checkIn(@User('userId') userId: string) {
-    return await this.workSessionsService.checkIn(userId);
+  async checkIn(
+    @User('userId') userId: string,
+    @User('workspaceId') workspaceId: string,
+  ) {
+    return await this.workSessionsService.checkIn(userId, workspaceId);
   }
 
   @Post('check-out')

@@ -30,6 +30,11 @@ export class AuthService {
       throw new BadRequestException('User already exists');
     }
 
+    const workspace = await this.prisma.workspace.findFirst({});
+    if (!workspace) {
+      throw new BadRequestException('No workspace available');
+    }
+
     const hashedPassword = await bcrypt.hash(dto.password, 10);
 
     const user = await this.prisma.user.create({
@@ -47,11 +52,21 @@ export class AuthService {
         active: true,
       },
     });
+
+    await this.prisma.userWorkspace.create({
+      data: {
+        userId: user.id,
+        workspaceId: workspace.id,
+        role: Role.EMPLOYEE,
+      },
+    });
+
     return {
       accessToken: await this.signToken({
         sub: user.id,
         role: user.role,
         username: dto.username,
+        workspaceId: workspace.id,
       }),
     };
   }
@@ -84,14 +99,23 @@ export class AuthService {
     if (!passwordMatches) {
       throw new BadRequestException('Invalid credentials');
     }
-
     const { password, ...safeUser } = userWithPassword;
+
+    const userWorkspace = await this.prisma.userWorkspace.findFirst({
+      where: {
+        userId: safeUser.id,
+      },
+    });
+    if (!userWorkspace) {
+      throw new BadRequestException('User workspace not found');
+    }
 
     return {
       accessToken: await this.signToken({
         sub: safeUser.id,
-        role: safeUser.role,
+        role: userWorkspace.role,
         username: safeUser.username,
+        workspaceId: userWorkspace.workspaceId,
       }),
     };
   }
@@ -141,6 +165,7 @@ export class AuthService {
     sub: string;
     username: string;
     role: Role;
+    workspaceId?: string;
   }): Promise<string> {
     return this.jwt.signAsync(payload);
   }

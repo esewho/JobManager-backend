@@ -41,10 +41,10 @@ function startOfMonthUTC(date: Date) {
 export class WorkSessionsService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async checkIn(userId: string): Promise<WorkSessionDto> {
+  async checkIn(userId: string, workspaceId: string): Promise<WorkSessionDto> {
     const now = new Date();
-    const user = await this.prisma.user.findUnique({
-      where: { id: userId },
+    const user = await this.prisma.userWorkspace.findUnique({
+      where: { userId_workspaceId: { userId, workspaceId } },
       select: { id: true },
     });
     if (!user) {
@@ -52,7 +52,11 @@ export class WorkSessionsService {
     }
 
     const openSession = await this.prisma.workSession.findFirst({
-      where: { userId: user.id, status: WorkSessionStatus.OPEN },
+      where: {
+        userId: user.id,
+        workspaceId: workspaceId,
+        status: WorkSessionStatus.OPEN,
+      },
     });
     if (openSession) {
       throw new BadRequestException(
@@ -69,6 +73,7 @@ export class WorkSessionsService {
     const todaySession = await this.prisma.workSession.count({
       where: {
         userId: user.id,
+        workspaceId: workspaceId,
         checkIn: {
           gte: start,
           lte: end,
@@ -82,6 +87,7 @@ export class WorkSessionsService {
     const session = await this.prisma.workSession.create({
       data: {
         userId: user.id,
+        workspaceId: workspaceId,
         checkIn: now,
         status: WorkSessionStatus.OPEN,
         totalMinutes: 0,
