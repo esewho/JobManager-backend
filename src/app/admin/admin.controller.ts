@@ -1,11 +1,21 @@
 import { AdminService } from './admin.service';
-import { Body, Controller, Get, Param, Patch, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  Param,
+  Patch,
+  Post,
+  UseGuards,
+} from '@nestjs/common';
 import { RolesGuard } from '../common/guards/roles.guard';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { Role } from '@prisma/client';
 import { Roles } from '../common/decorators/roles.decorator';
 import { UserStatusDto } from './Dto/userStatus.dto';
 import { UpdateSessionShift } from './Dto/updateSessionShift.dto';
+import { CreateUserDto } from './Dto/createUser.dto';
+import { User } from '../common/decorators/user-id.decorator';
 
 @Controller('admin')
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -44,5 +54,14 @@ export class AdminController {
   @Get('all-tipPools')
   async getAllTipsPools() {
     return await this.AdminService.getAllTipsPools();
+  }
+
+  @Post('create-employee/:workspaceId')
+  async createEmployee(
+    @Param('workspaceId') workspaceId: string,
+    @Body() dto: CreateUserDto,
+    @User('userId') adminId: string,
+  ) {
+    return await this.AdminService.createEmployee(dto, workspaceId, adminId);
   }
 }

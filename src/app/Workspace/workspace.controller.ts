@@ -37,6 +37,12 @@ export class WorkspaceController {
     return await this.workspaceService.getAllWorkspaces(userId);
   }
 
+  @Get(':workspaceId')
+  @UseGuards(WorkspaceGuard)
+  async getWorkspaceById(@Param('workspaceId') workspaceId: string) {
+    return await this.workspaceService.getWorkspaceById(workspaceId);
+  }
+
   @Patch('update/:workspaceId')
   @UseGuards(RolesGuard, WorkspaceGuard)
   @Roles(Role.ADMIN)

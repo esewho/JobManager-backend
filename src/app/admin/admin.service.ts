@@ -4,7 +4,10 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { PrismaService } from 'src/prisma/prisma.service';
-import { WorkSessionStatus, WorkShift } from '@prisma/client';
+import { Role, WorkSessionStatus, WorkShift } from '@prisma/client';
+import { UserDto } from 'src/user/Dto/user-dto';
+import { CreateUserDto } from './Dto/createUser.dto';
+import * as bcrypt from 'bcrypt';
 
 function getDayRange(date: Date) {
   const start = new Date(date);
@@ -111,5 +114,68 @@ export class AdminService {
         totalAmount: true,
       },
     });
+  }
+
+  async createEmployee(
+    dto: CreateUserDto,
+    workspaceId: string,
+    adminUserId: string,
+  ) {
+    const isAdminInWorkspace = await this.prisma.userWorkspace.findFirst({
+      where: {
+        userId: adminUserId,
+        workspaceId: workspaceId,
+        role: Role.ADMIN,
+      },
+    });
+    if (!isAdminInWorkspace || isAdminInWorkspace.role !== Role.ADMIN) {
+      throw new BadRequestException(
+        'Only admins can create employees in this workspace',
+      );
+    }
+    const existingUser = await this.prisma.userWorkspace.findFirst({
+      where: {
+        user: {
+          username: dto.username,
+        },
+        workspaceId: workspaceId,
+      },
+    });
+    if (existingUser) {
+      throw new BadRequestException('User already exists in this workspace');
+    }
+
+    const workspace = await this.prisma.workspace.findUnique({
+      where: {
+        id: workspaceId,
+      },
+    });
+    if (!workspace) {
+      throw new BadRequestException('Workspace does not exist');
+    }
+
+    const hashedPassword = await bcrypt.hash(dto.password, 10);
+    const user = await this.prisma.user.create({
+      data: {
+        username: dto.username,
+        password: hashedPassword,
+        role: dto.role,
+        active: dto.active,
+      },
+    });
+    await this.prisma.userWorkspace.create({
+      data: {
+        userId: user.id,
+        workspaceId: workspaceId,
+        role: dto.role,
+      },
+    });
+    return {
+      id: user.id,
+      username: user.username,
+      role: user.role,
+      active: user.active,
+      createdAt: user.createdAt,
+    } as UserDto;
   }
 }

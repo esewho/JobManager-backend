@@ -94,6 +94,24 @@ export class WorkspaceService {
     return userWorkspace.map((uw) => uw.workspace);
   }
 
+  async getWorkspaceById(workspaceId: string) {
+    const workspace = await this.prisma.workspace.findUnique({
+      where: { id: workspaceId },
+      select: {
+        id: true,
+        name: true,
+        imageUrl: true,
+        createdAt: true,
+        _count: { select: { users: true } },
+      },
+    });
+
+    if (!workspace) {
+      throw new NotFoundException('Workspace not found');
+    }
+    return workspace;
+  }
+
   async deleteWorkspace(workspaceId: string, userId: string) {
     const userWorkspace = await this.prisma.userWorkspace.findFirst({
       where: {
