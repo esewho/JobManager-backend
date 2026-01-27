@@ -81,16 +81,23 @@ export class WorkspaceService {
   }
 
   async getAllWorkspaces(userId: string) {
-    const userWorkspace = await prisma.userWorkspace.findMany({
+    const workspace = await prisma.workspace.findMany({
       where: {
-        userId,
+        users: { some: { userId } },
       },
-      include: { workspace: true },
+      select: {
+        id: true,
+        name: true,
+        imageUrl: true,
+        createdAt: true,
+        _count: { select: { users: true } },
+      },
     });
-    if (userWorkspace.length === 0) {
+
+    if (workspace.length === 0) {
       throw new NotFoundException('No workspaces found for this user');
     }
-    return userWorkspace.map((uw) => uw.workspace);
+    return workspace;
   }
 
   async getWorkspaceById(workspaceId: string) {

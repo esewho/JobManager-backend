@@ -32,7 +32,7 @@ export class WorkspaceController {
     return await this.workspaceService.createWorkspace(dto, userId);
   }
 
-  @Get('me')
+  @Get('all')
   async getWorkspaces(@User('userId') userId: string) {
     return await this.workspaceService.getAllWorkspaces(userId);
   }
