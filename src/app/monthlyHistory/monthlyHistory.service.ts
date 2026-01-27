@@ -29,7 +29,6 @@ function startOfWeekUTC(date: Date): Date {
 
 @Injectable()
 export class MonthlyHistoryService {
-
   async getMonths(userId: string): Promise<MonthlyHistoryDto[]> {
     const sessions = await prisma.workSession.findMany({
       where: {
