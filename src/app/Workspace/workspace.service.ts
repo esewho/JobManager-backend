@@ -7,10 +7,26 @@ import {
 import { WorkspaceDto } from './Dto/workspace.dto';
 import { Role } from '@prisma/client';
 import { prisma } from 'src/prisma/prisma';
+import * as path from 'path';
+import * as fs from 'fs';
 
 @Injectable()
 export class WorkspaceService {
-  async createWorkspace(dto: WorkspaceDto, userId: string) {
+  async createWorkspace(
+    dto: WorkspaceDto,
+    userId: string,
+    file: Express.Multer.File,
+  ) {
+    let imageUrl: string | undefined;
+    if (file) {
+      const uploadPath = path.join(__dirname, '../../uploads');
+      if (!fs.existsSync(uploadPath)) {
+        fs.mkdirSync(uploadPath);
+      }
+      const filename = `${Date.now()} - ${file.originalname}`;
+      fs.writeFileSync(path.join(uploadPath, filename), file.buffer);
+      imageUrl = `/uploads/${filename}`;
+    }
     const user = await prisma.user.findUnique({
       where: {
         id: userId,
@@ -32,7 +48,7 @@ export class WorkspaceService {
     const workspace = await prisma.workspace.create({
       data: {
         name: dto.name,
-        imageUrl: dto.imageUrl,
+        imageUrl,
       },
     });
     await prisma.userWorkspace.create({

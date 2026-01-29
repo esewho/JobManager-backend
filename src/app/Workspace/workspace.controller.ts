@@ -16,6 +16,8 @@ import { Role } from '@prisma/client';
 import { WorkspaceDto } from './Dto/workspace.dto';
 import { User } from '../common/decorators/user-id.decorator';
 import { WorkspaceGuard } from '../common/guards/workspace.guard';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { UploadedFile, UseInterceptors } from '@nestjs/common';
 
 @UseGuards(JwtAuthGuard)
 @Controller('workspace')
@@ -25,11 +27,13 @@ export class WorkspaceController {
   @Post('create')
   @UseGuards(RolesGuard)
   @Roles(Role.ADMIN)
+  @UseInterceptors(FileInterceptor('image'))
   async createWorkspace(
     @Body() dto: WorkspaceDto,
+    @UploadedFile() file: Express.Multer.File,
     @User('userId') userId: string,
   ) {
-    return await this.workspaceService.createWorkspace(dto, userId);
+    return await this.workspaceService.createWorkspace(dto, userId, file);
   }
 
   @Get('all')
