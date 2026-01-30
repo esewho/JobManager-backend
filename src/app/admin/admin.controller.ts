@@ -33,9 +33,9 @@ export class AdminController {
     );
   }
 
-  @Get('working-users')
-  async getWorkingUsers() {
-    return await this.AdminService.getWorkingUsers();
+  @Get(':workspaceId/users')
+  async getWorkingUsers(@Param('workspaceId') workspaceId: string) {
+    return await this.AdminService.getAllWorkspaceUsers(workspaceId);
   }
 
   @Patch('work-sessions/:id/shift')
@@ -46,9 +46,9 @@ export class AdminController {
     return await this.AdminService.updateWorkSessionShift(sessionId, dto.shift);
   }
 
-  @Get('all-work-sessions')
-  async getAllWorkSessions() {
-    return await this.AdminService.getAllWorkSessions();
+  @Get('all-work-sessions/:workspaceId')
+  async getAllWorkSessions(@Param('workspaceId') workspaceId: string) {
+    return await this.AdminService.getAllWorkSessions(workspaceId);
   }
 
   @Get('all-tipPools')

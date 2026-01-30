@@ -39,12 +39,11 @@ function startOfMonthUTC(date: Date) {
 
 @Injectable()
 export class WorkSessionsService {
-
   async checkIn(userId: string, workspaceId: string): Promise<WorkSessionDto> {
     const now = new Date();
     const user = await prisma.userWorkspace.findUnique({
       where: { userId_workspaceId: { userId, workspaceId } },
-      select: { id: true },
+      select: { userId: true },
     });
     if (!user) {
       throw new NotFoundException('User not found');
@@ -52,7 +51,7 @@ export class WorkSessionsService {
 
     const openSession = await prisma.workSession.findFirst({
       where: {
-        userId: user.id,
+        userId: userId,
         workspaceId: workspaceId,
         status: WorkSessionStatus.OPEN,
       },
@@ -71,7 +70,7 @@ export class WorkSessionsService {
 
     const todaySession = await prisma.workSession.count({
       where: {
-        userId: user.id,
+        userId: userId,
         workspaceId: workspaceId,
         checkIn: {
           gte: start,
@@ -85,7 +84,7 @@ export class WorkSessionsService {
 
     const session = await prisma.workSession.create({
       data: {
-        userId: user.id,
+        userId: userId,
         workspaceId: workspaceId,
         checkIn: now,
         status: WorkSessionStatus.OPEN,
@@ -104,28 +103,25 @@ export class WorkSessionsService {
     };
   }
 
-  async checkOut(userId: string): Promise<WorkSessionDto> {
+  async checkOut(userId: string, workspaceId: string): Promise<WorkSessionDto> {
     const WORKDAY_MINUTES = 8 * 60;
     const now = new Date();
-    const user = await prisma.user.findUnique({
-      where: { id: userId },
-      select: { id: true },
-    });
-    if (!user) {
-      throw new NotFoundException('User not found');
-    }
 
     const openSession = await prisma.workSession.findFirst({
-      where: { userId: user.id, status: WorkSessionStatus.OPEN },
+      where: {
+        userId,
+        workspaceId,
+        status: WorkSessionStatus.OPEN,
+      },
     });
+
     if (!openSession) {
       throw new BadRequestException(
-        'There is no open work session for this user',
+        'There is no open work session for this workspace',
       );
     }
 
-    const checkIn = openSession.checkIn;
-    const diffMs = now.getTime() - checkIn.getTime();
+    const diffMs = now.getTime() - openSession.checkIn.getTime();
     const diffMins = Math.max(Math.floor(diffMs / 60000), 0);
     const extraTime = Math.max(diffMins - WORKDAY_MINUTES, 0);
 
@@ -168,7 +164,7 @@ export class WorkSessionsService {
     });
   }
 
-  async getMySummary(userId: string) {
+  async getMySummary(userId: string, workspaceId: string) {
     const now = new Date();
 
     const startToday = startOfDayUTC(now);
@@ -185,6 +181,7 @@ export class WorkSessionsService {
         prisma.workSession.aggregate({
           where: {
             userId,
+            workspaceId,
             status: WorkSessionStatus.CLOSED,
             checkIn: { gte: startToday },
           },
@@ -196,6 +193,7 @@ export class WorkSessionsService {
         prisma.workSession.aggregate({
           where: {
             userId,
+            workspaceId,
             status: WorkSessionStatus.CLOSED,
             checkIn: { gte: startWeek },
           },
@@ -204,9 +202,10 @@ export class WorkSessionsService {
             extraMinutes: true,
           },
         }),
-       prisma.workSession.aggregate({
+        prisma.workSession.aggregate({
           where: {
             userId,
+            workspaceId,
             status: WorkSessionStatus.CLOSED,
             checkIn: { gte: startMonth },
           },
@@ -260,7 +259,10 @@ export class WorkSessionsService {
     };
   }
 
-  async getTodaySession(userId: string): Promise<WorkSessionDto | null> {
+  async getTodaySession(
+    userId: string,
+    workspaceId: string,
+  ): Promise<WorkSessionDto | null> {
     const now = new Date();
     const start = new Date(now);
     start.setHours(0, 0, 0, 0);
@@ -270,6 +272,7 @@ export class WorkSessionsService {
     const session = await prisma.workSession.findFirst({
       where: {
         userId,
+        workspaceId,
         checkIn: {
           gte: start,
           lte: end,

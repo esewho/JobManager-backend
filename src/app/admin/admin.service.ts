@@ -35,25 +35,40 @@ export class AdminService {
     };
   }
 
-  async getWorkingUsers() {
-    const sessions = await prisma.workSession.findMany({
-      where: { status: WorkSessionStatus.OPEN },
-      include: {
+  async getAllWorkspaceUsers(workspaceId: string) {
+    const startOfday = new Date();
+    startOfday.setHours(0, 0, 0, 0);
+    return prisma.userWorkspace.findMany({
+      where: {
+        workspaceId,
+      },
+      select: {
+        role: true,
         user: {
           select: {
-            id: true,
             username: true,
-            role: true,
+            session: {
+              where: {
+                workspaceId,
+                date: {
+                  gte: startOfday,
+                },
+              },
+              orderBy: {
+                checkIn: 'desc',
+              },
+              take: 1,
+              select: {
+                status: true,
+                checkIn: true,
+                checkOut: true,
+                totalMinutes: true,
+              },
+            },
           },
         },
       },
     });
-    return sessions.map((session) => ({
-      userId: session.user.id,
-      username: session.user.username,
-      checkIn: session.checkIn,
-      role: session.user.role,
-    }));
   }
 
   async updateWorkSessionShift(sessionId: string, shift: WorkShift) {
@@ -91,15 +106,40 @@ export class AdminService {
     });
   }
 
-  async getAllWorkSessions() {
-    return await prisma.workSession.findMany({
+  async getAllWorkSessions(workspaceId: string) {
+    return prisma.workSession.findMany({
+      where: {
+        workspaceId,
+        user: {
+          workspaces: {
+            some: { workspaceId },
+          },
+        },
+      },
       select: {
         id: true,
-        userId: true,
+        date: true,
+        status: true,
         checkIn: true,
         checkOut: true,
-        status: true,
-        shift: true,
+        totalMinutes: true,
+        extraMinutes: true,
+
+        user: {
+          select: {
+            id: true,
+            username: true,
+            workspaces: {
+              where: { workspaceId },
+              select: {
+                role: true,
+              },
+            },
+          },
+        },
+      },
+      orderBy: {
+        date: 'desc',
       },
     });
   }

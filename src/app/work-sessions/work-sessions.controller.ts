@@ -1,4 +1,12 @@
-import { Controller, Get, Post, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  Param,
+  Post,
+  Query,
+  UseGuards,
+} from '@nestjs/common';
 import { WorkSessionsService } from './work-sessions.service';
 import { User } from '../common/decorators/user-id.decorator';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
@@ -10,14 +18,17 @@ export class WorkSessionsController {
   @Post('check-in')
   async checkIn(
     @User('userId') userId: string,
-    @User('workspaceId') workspaceId: string,
+    @Body('workspaceId') workspaceId: string,
   ) {
     return await this.workSessionsService.checkIn(userId, workspaceId);
   }
 
   @Post('check-out')
-  async checkOut(@User('userId') userId: string) {
-    return await this.workSessionsService.checkOut(userId);
+  async checkOut(
+    @User('userId') userId: string,
+    @Body('worspaceId') workspaceId: string,
+  ) {
+    return await this.workSessionsService.checkOut(userId, workspaceId);
   }
 
   @Get('me')
@@ -26,12 +37,18 @@ export class WorkSessionsController {
   }
 
   @Get('me-summary')
-  async getMySummary(@User('userId') userId: string) {
-    return await this.workSessionsService.getMySummary(userId);
+  async getMySummary(
+    @User('userId') userId: string,
+    @Query('workspaceId') workspaceId: string,
+  ) {
+    return await this.workSessionsService.getMySummary(userId, workspaceId);
   }
 
-  @Get('me/today')
-  async getTodaySession(@User('userId') userId: string) {
-    return await this.workSessionsService.getTodaySession(userId);
+  @Get('me/today/:workspaceId')
+  async getTodaySession(
+    @User('userId') userId: string,
+    @Param('workspaceId') workspaceId: string,
+  ) {
+    return await this.workSessionsService.getTodaySession(userId, workspaceId);
   }
 }

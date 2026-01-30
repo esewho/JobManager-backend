@@ -26,7 +26,6 @@ function startOfWeek(date: Date): Date {
 
 @Injectable()
 export class WeeklyHistoryService {
-
   async getWeeklyHistory(userId: string): Promise<WeeklyHistoryDto[]> {
     const now = new Date();
 
