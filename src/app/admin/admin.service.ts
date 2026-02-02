@@ -36,23 +36,17 @@ export class AdminService {
   }
 
   async getAllWorkspaceUsers(workspaceId: string) {
-    const startOfday = new Date();
-    startOfday.setHours(0, 0, 0, 0);
-    return prisma.userWorkspace.findMany({
-      where: {
-        workspaceId,
-      },
+    const users = await prisma.userWorkspace.findMany({
+      where: { workspaceId },
       select: {
         role: true,
         user: {
           select: {
+            id: true,
             username: true,
             session: {
               where: {
                 workspaceId,
-                date: {
-                  gte: startOfday,
-                },
               },
               orderBy: {
                 checkIn: 'desc',
@@ -68,6 +62,28 @@ export class AdminService {
           },
         },
       },
+    });
+
+    return users.map((u) => {
+      const lastSession = u.user.session[0] ?? null;
+
+      return {
+        role: u.role,
+        user: {
+          id: u.user.id,
+          username: u.user.username,
+
+          currentStatus: lastSession
+            ? lastSession.status === 'OPEN'
+              ? 'OPEN'
+              : 'CLOSED'
+            : 'NONE',
+
+          activeSession: lastSession?.status === 'OPEN' ? lastSession : null,
+
+          lastSession: lastSession?.status === 'CLOSED' ? lastSession : null,
+        },
+      };
     });
   }
 

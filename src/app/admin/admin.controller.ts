@@ -34,7 +34,7 @@ export class AdminController {
   }
 
   @Get(':workspaceId/users')
-  async getWorkingUsers(@Param('workspaceId') workspaceId: string) {
+  async getAllWorkspaceUsers(@Param('workspaceId') workspaceId: string) {
     return await this.AdminService.getAllWorkspaceUsers(workspaceId);
   }
 

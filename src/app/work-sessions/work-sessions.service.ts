@@ -46,7 +46,7 @@ export class WorkSessionsService {
       select: { userId: true },
     });
     if (!user) {
-      throw new NotFoundException('User not found');
+      throw new NotFoundException('User or workspace not found');
     }
 
     const openSession = await prisma.workSession.findFirst({
