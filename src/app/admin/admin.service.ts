@@ -36,7 +36,7 @@ export class AdminService {
   }
 
   async getAllWorkspaceUsers(workspaceId: string) {
-    const users = await prisma.userWorkspace.findMany({
+    return await prisma.userWorkspace.findMany({
       where: { workspaceId },
       select: {
         role: true,
@@ -51,7 +51,7 @@ export class AdminService {
               orderBy: {
                 checkIn: 'desc',
               },
-              take: 1,
+              take: 2,
               select: {
                 status: true,
                 checkIn: true,
@@ -62,28 +62,6 @@ export class AdminService {
           },
         },
       },
-    });
-
-    return users.map((u) => {
-      const lastSession = u.user.session[0] ?? null;
-
-      return {
-        role: u.role,
-        user: {
-          id: u.user.id,
-          username: u.user.username,
-
-          currentStatus: lastSession
-            ? lastSession.status === 'OPEN'
-              ? 'OPEN'
-              : 'CLOSED'
-            : 'NONE',
-
-          activeSession: lastSession?.status === 'OPEN' ? lastSession : null,
-
-          lastSession: lastSession?.status === 'CLOSED' ? lastSession : null,
-        },
-      };
     });
   }
 
