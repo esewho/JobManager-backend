@@ -15,9 +15,7 @@ type SafeUser = {
 
 @Injectable()
 export class AuthService {
-  constructor(
-    private jwt: JwtService,
-  ) {}
+  constructor(private jwt: JwtService) {}
   async register(dto: RegisterDto): Promise<{ accessToken: string }> {
     const existingUser = await prisma.user.findUnique({
       where: {

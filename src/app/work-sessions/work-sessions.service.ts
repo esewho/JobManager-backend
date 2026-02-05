@@ -51,11 +51,24 @@ export class WorkSessionsService {
 
     const openSession = await prisma.workSession.findFirst({
       where: {
-        userId: userId,
-        workspaceId: workspaceId,
+        userId,
+        workspaceId,
         status: WorkSessionStatus.OPEN,
       },
     });
+
+    if (!workspaceId) {
+      throw new BadRequestException('workspaceId is required');
+    }
+    if (openSession) {
+      await prisma.workSession.update({
+        where: { id: openSession.id },
+        data: {
+          status: WorkSessionStatus.CLOSED,
+          checkOut: now,
+        },
+      });
+    }
     if (openSession) {
       throw new BadRequestException(
         'There is already an open work session for this user',
@@ -78,9 +91,9 @@ export class WorkSessionsService {
         },
       },
     });
-    if (todaySession >= 2) {
-      throw new BadRequestException('User has already checked in twice today');
-    }
+    // if (todaySession >= 2) {
+    //   throw new BadRequestException('User has already checked in twice today');
+    // }
 
     const session = await prisma.workSession.create({
       data: {

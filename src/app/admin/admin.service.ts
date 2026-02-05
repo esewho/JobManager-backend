@@ -51,7 +51,7 @@ export class AdminService {
               orderBy: {
                 checkIn: 'desc',
               },
-              take: 2,
+              take: 5,
               select: {
                 status: true,
                 checkIn: true,
