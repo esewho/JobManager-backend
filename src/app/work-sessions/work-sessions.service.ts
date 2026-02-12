@@ -91,7 +91,7 @@ export class WorkSessionsService {
         },
       },
     });
-    // if (todaySession >= 2) {
+    // if (todaySession >= 5) {
     //   throw new BadRequestException('User has already checked in twice today');
     // }
 
