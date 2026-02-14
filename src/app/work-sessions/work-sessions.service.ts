@@ -402,4 +402,35 @@ export class WorkSessionsService {
       (a, b) => b.date.getTime() - a.date.getTime(),
     );
   }
+
+  async getMySessions(
+    userId: string,
+    workspaceId: string,
+  ): Promise<WorkSessionDto[]> {
+    const userOfWorkspace = await prisma.userWorkspace.findUnique({
+      where: {
+        userId_workspaceId: { userId, workspaceId },
+      },
+    });
+    if (!userOfWorkspace)
+      throw new NotFoundException('User no encontrado en este workspace');
+
+    return await prisma.workSession.findMany({
+      where: { userId, workspaceId },
+      orderBy: {
+        checkIn: 'desc',
+      },
+      take: 10,
+      select: {
+        id: true,
+        status: true,
+        checkIn: true,
+        checkOut: true,
+        totalMinutes: true,
+        extraMinutes: true,
+        date: true,
+        shift: true,
+      },
+    });
+  }
 }

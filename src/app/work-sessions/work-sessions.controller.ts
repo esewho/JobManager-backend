@@ -32,7 +32,7 @@ export class WorkSessionsController {
   }
 
   @Get('me')
-  async getMySessions(@User('userId') userId: string) {
+  async getSessionsByUser(@User('userId') userId: string) {
     return await this.workSessionsService.getSessionsByUser(userId);
   }
 
@@ -50,5 +50,13 @@ export class WorkSessionsController {
     @Param('workspaceId') workspaceId: string,
   ) {
     return await this.workSessionsService.getTodaySession(userId, workspaceId);
+  }
+
+  @Get('/me/mySessions/:workspaceId')
+  async getMySessions(
+    @User('userId') userId: string,
+    @Param('workspaceId') workspaceId: string,
+  ) {
+    return await this.workSessionsService.getMySessions(userId, workspaceId);
   }
 }
