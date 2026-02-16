@@ -211,4 +211,32 @@ export class AdminService {
       createdAt: user.createdAt,
     } as UserDto;
   }
+
+  async getAllUsersOfWorkspaceToManage(workspaceId: string) {
+    const users = await prisma.userWorkspace.findMany({
+      where: { workspaceId },
+      select: {
+        role: true,
+        user: {
+          select: {
+            id: true,
+            username: true,
+            active: true,
+          },
+        },
+      },
+      orderBy: {
+        user: {
+          username: 'asc',
+        },
+      },
+    });
+
+    return users.map((u) => ({
+      id: u.user.id,
+      username: u.user.username,
+      active: u.user.active,
+      role: u.role,
+    }));
+  }
 }

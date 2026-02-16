@@ -64,4 +64,9 @@ export class AdminController {
   ) {
     return await this.AdminService.createEmployee(dto, workspaceId, adminId);
   }
+
+  @Get('get-all-users-to-manage/:workspaceId')
+  async getAllUsers(@Param('workspaceId') workspaceId: string) {
+    return await this.AdminService.getAllUsersOfWorkspaceToManage(workspaceId);
+  }
 }
