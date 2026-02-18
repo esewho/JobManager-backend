@@ -10,6 +10,7 @@ import { UserDataModule } from './user/user-data.module';
 import { WeeklyHistoryModule } from './app/weekly-history/weekly-history.module';
 import { MonthlyHistoryModule } from './app/monthlyHistory/monthlyHistory.module';
 import { WorkspaceModule } from './app/Workspace/workspace.module';
+import { WorkSchedulesModule } from './app/work-schedules/work-schedules.module';
 
 @Module({
   imports: [
@@ -22,6 +23,7 @@ import { WorkspaceModule } from './app/Workspace/workspace.module';
     WeeklyHistoryModule,
     MonthlyHistoryModule,
     WorkspaceModule,
+    WorkSchedulesModule,
   ],
   controllers: [AppController],
   providers: [AppService],

@@ -28,6 +28,12 @@ enum Role {
     NIGHT
   }
 
+  enum ScheduleStatus {
+    PENDING
+    ACCEPTED
+    REJECTED
+  } 
+
 model User {
   id String @id @default(cuid())
   username String @unique
@@ -59,6 +65,7 @@ model UserWorkspace{
   userId String
   workspaceId String
   role Role @default(EMPLOYEE)
+  schedules WorkSchedule[]
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
   workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   createdAt DateTime @default(now())
@@ -81,6 +88,24 @@ model WorkSession{
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   @@index([userId, date])
+}
+
+model WorkSchedule{
+  id  String  @id @default(cuid())
+  userWorkspaceId String
+
+
+  date  DateTime
+  startTime DateTime
+  endTime DateTime
+
+  status  ScheduleStatus @default(PENDING)
+
+  createdAt DateTime  @default(now())
+
+  userWorkspace  UserWorkspace @relation(fields:[userWorkspaceId], references: [id], onDelete: Cascade)
+
+  @@index([userWorkspaceId, date])
 }
 
 model TipPool{
