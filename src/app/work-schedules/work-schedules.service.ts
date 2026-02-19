@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   ForbiddenException,
   Injectable,
   NotFoundException,
@@ -7,6 +8,16 @@ import { prisma } from 'src/prisma/prisma';
 import { CreateScheduleDto } from './Dto/createSchedule.dto';
 import { UpdateScheduleDto } from './Dto/UpdateSchedule.dto';
 import { ScheduleStatus } from '@prisma/client';
+
+function combineDateAndTime(date: string, time: string): Date {
+  if (!date) {
+    throw new ForbiddenException('No date to format');
+  }
+  const [year, month, day] = date.split('-').map(Number);
+  const [hours, minutes] = time.split(':').map(Number);
+
+  return new Date(year, month - 1, day, hours, minutes);
+}
 
 @Injectable()
 export class WorkSchedulesService {
@@ -18,12 +29,40 @@ export class WorkSchedulesService {
     if (!userWorkspace) {
       throw new NotFoundException('User does not belong to this workspace');
     }
+
+    const start = combineDateAndTime(dto.date, dto.startTime);
+    const end = combineDateAndTime(dto.date, dto.endTime);
+    if (end <= start) {
+      throw new BadRequestException('End time must be after start time');
+    }
+
+    if (start < new Date()) {
+      throw new BadRequestException('Cannot create schedule in the past');
+    }
+
+    const overlapping = await prisma.workSchedule.findFirst({
+      where: {
+        userWorkspaceId: userWorkspace.id,
+        date: new Date(dto.date),
+        OR: [
+          {
+            startTime: { lt: end },
+            endTime: { gt: start },
+          },
+        ],
+      },
+    });
+
+    if (overlapping) {
+      throw new BadRequestException('Schedule overlaps with another shift');
+    }
+
     return prisma.workSchedule.create({
       data: {
         userWorkspaceId: dto.userWorkspaceId,
         date: new Date(dto.date),
-        startTime: new Date(dto.startTime),
-        endTime: new Date(dto.endTime),
+        startTime: start,
+        endTime: end,
       },
     });
   }
@@ -39,12 +78,34 @@ export class WorkSchedulesService {
     if (!schedule) {
       throw new NotFoundException('Schedule not found in this workspace');
     }
+    if (!dto.date) {
+      throw new ForbiddenException('No date');
+    }
+    if (!dto.startTime) {
+      throw new ForbiddenException('No startTime defined');
+    }
+    if (!dto.endTime) {
+      throw new ForbiddenException('No endTime defined');
+    }
+    const date = dto.date ?? schedule.date.toISOString().split('T')[0];
+
+    const start = dto.startTime
+      ? combineDateAndTime(date, dto.startTime)
+      : schedule.startTime;
+
+    const end = dto.endTime
+      ? combineDateAndTime(date, dto.endTime)
+      : schedule.endTime;
+
+    if (end <= start) {
+      throw new BadRequestException('End time must be after start time');
+    }
     return await prisma.workSchedule.update({
       where: { id: scheduleId },
       data: {
         date: dto.date ? new Date(dto.date) : undefined,
-        startTime: dto.startTime ? new Date(dto.startTime) : undefined,
-        endTime: dto.endTime ? new Date(dto.endTime) : undefined,
+        startTime: start ? new Date(start) : undefined,
+        endTime: end ? new Date(end) : undefined,
       },
     });
   }
