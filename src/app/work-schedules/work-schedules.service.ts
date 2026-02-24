@@ -23,7 +23,12 @@ function combineDateAndTime(date: string, time: string): Date {
 export class WorkSchedulesService {
   async createSchedule(dto: CreateScheduleDto, workspaceId: string) {
     const userWorkspace = await prisma.userWorkspace.findUnique({
-      where: { id: dto.userWorkspaceId, workspaceId },
+      where: {
+        userId_workspaceId: {
+          userId: dto.userId,
+          workspaceId: workspaceId,
+        },
+      },
     });
 
     if (!userWorkspace) {
@@ -59,7 +64,7 @@ export class WorkSchedulesService {
 
     return prisma.workSchedule.create({
       data: {
-        userWorkspaceId: dto.userWorkspaceId,
+        userWorkspaceId: userWorkspace.id,
         date: new Date(dto.date),
         startTime: start,
         endTime: end,
