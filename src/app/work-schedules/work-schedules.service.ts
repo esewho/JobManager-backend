@@ -175,7 +175,10 @@ export class WorkSchedulesService {
     scheduleId: string,
     status: ScheduleStatus,
   ) {
-    const schedule = await prisma.workSchedule.findFirst({
+    if (status !== ScheduleStatus.PENDING) {
+      throw new BadRequestException('Schedule already processed');
+    }
+    const result = await prisma.workSchedule.updateMany({
       where: {
         id: scheduleId,
         userWorkspace: {
@@ -183,13 +186,13 @@ export class WorkSchedulesService {
           workspaceId,
         },
       },
-    });
-    if (!schedule) {
-      throw new ForbiddenException('You cannot modify this schedule');
-    }
-    return prisma.workSchedule.update({
-      where: { id: scheduleId },
       data: { status },
     });
+
+    if (result.count === 0) {
+      throw new ForbiddenException('You cannot modify this schedule');
+    }
+
+    return { message: 'Schedule updated successfully' };
   }
 }
