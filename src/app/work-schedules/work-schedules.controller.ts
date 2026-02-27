@@ -68,7 +68,7 @@ export class WorkSchedulesController {
     @User('userId') userId: string,
     @Param('workspaceId') workspaceId: string,
   ) {
-    return this.workSchedulesService.getMySchedules(userId, workspaceId);
+    return this.workSchedulesService.getMyPendingSchedules(userId, workspaceId);
   }
 
   @Roles(Role.EMPLOYEE)
