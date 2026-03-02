@@ -11,7 +11,9 @@ async function bootstrap() {
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
     allowedHeaders: 'Content-Type, Authorization',
   });
+  app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
   await app.listen(process.env.PORT ?? 3000);
-  app.use('/uploads', express.static(path.join(__dirname, '..', 'uploads')));
 }
+
+console.log('Serving uploads from:', path.join(process.cwd(), 'uploads'));
 bootstrap();

@@ -17,16 +17,18 @@ export class WorkspaceService {
     userId: string,
     file: Express.Multer.File,
   ) {
-    let imageUrl: string | undefined;
-    if (file) {
-      const uploadPath = path.join(__dirname, '../../uploads');
-      if (!fs.existsSync(uploadPath)) {
-        fs.mkdirSync(uploadPath);
-      }
-      const filename = `${Date.now()} - ${file.originalname}`;
-      fs.writeFileSync(path.join(uploadPath, filename), file.buffer);
-      imageUrl = `/uploads/${filename}`;
+    const uploadPath = path.join(process.cwd(), 'uploads');
+
+    if (!fs.existsSync(uploadPath)) {
+      fs.mkdirSync(uploadPath, { recursive: true });
     }
+
+    const sanitizedOriginalName = file.originalname.replace(/\s+/g, '_');
+    const filename = `${Date.now()}_${sanitizedOriginalName}`;
+    const imageUrl: string | undefined = `/uploads/${filename}`;
+
+    fs.writeFileSync(path.join(uploadPath, filename), file.buffer);
+
     const user = await prisma.user.findUnique({
       where: {
         id: userId,
@@ -152,6 +154,13 @@ export class WorkspaceService {
     });
     if (!existingWorkspace) {
       throw new NotFoundException('Workspace not found');
+    }
+
+    if (existingWorkspace.imageUrl) {
+      const filePath = path.join(process.cwd(), existingWorkspace.imageUrl);
+      if (fs.existsSync(filePath)) {
+        fs.unlinkSync(filePath);
+      }
     }
 
     await prisma.workspace.delete({
