@@ -54,11 +54,13 @@ export class WorkspaceController {
     @Body() dto: WorkspaceDto,
     @Param('workspaceId') workspaceId: string,
     @User('userId') userId: string,
+    @UploadedFile() file: Express.Multer.File,
   ) {
     return await this.workspaceService.updateWorkspace(
       workspaceId,
       dto,
       userId,
+      file,
     );
   }
   @Delete('delete/:workspaceId')

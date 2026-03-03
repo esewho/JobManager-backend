@@ -200,4 +200,22 @@ export class WorkSchedulesService {
 
     return { message: 'Schedule updated successfully' };
   }
+
+  async getMyNextSchedule(workspaceId: string, userId: string) {
+    const now = new Date();
+
+    return prisma.workSchedule.findFirst({
+      where: {
+        status: ScheduleStatus.ACCEPTED,
+        startTime: {
+          gte: now,
+        },
+        userWorkspace: {
+          userId,
+          workspaceId,
+        },
+      },
+      orderBy: { startTime: 'asc' },
+    });
+  }
 }

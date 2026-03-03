@@ -86,4 +86,13 @@ export class WorkSchedulesController {
       dto.status,
     );
   }
+
+  @Roles(Role.EMPLOYEE)
+  @Get('me/:workspaceId/next')
+  async getMyNextSchedule(
+    @User('userId') userId: string,
+    @Param('workspaceId') workspaceId: string,
+  ) {
+    return this.workSchedulesService.getMyNextSchedule(workspaceId, userId);
+  }
 }

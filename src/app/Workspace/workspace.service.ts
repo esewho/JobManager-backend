@@ -67,6 +67,7 @@ export class WorkspaceService {
     workspaceId: string,
     dto: WorkspaceDto,
     userId: string,
+    file?: Express.Multer.File,
   ) {
     const userWorkspace = await prisma.userWorkspace.findFirst({
       where: {
@@ -83,6 +84,31 @@ export class WorkspaceService {
         id: workspaceId,
       },
     });
+
+    let newImageUrl = existingWorkspace?.imageUrl;
+    if (file) {
+      const uploadPath = path.join(process.cwd(), 'uploads');
+
+      const sanitizedName = file.originalname.replace(/\s+/g, '_');
+      const filename = `${Date.now()}_${sanitizedName}`;
+
+      const filePath = path.join.apply(uploadPath, filename);
+
+      await fs.promises.writeFile(filePath, file.buffer);
+
+      newImageUrl = `/uploads${filename}`;
+
+      if (existingWorkspace?.imageUrl) {
+        const oldPath = path.join(process.cwd(), existingWorkspace.imageUrl);
+
+        try {
+          await fs.promises.unlink(oldPath);
+        } catch (error) {
+          console.warn('Old image not found');
+        }
+      }
+    }
+
     if (!existingWorkspace) {
       throw new NotFoundException('Workspace not found');
     }
@@ -92,7 +118,7 @@ export class WorkspaceService {
       },
       data: {
         ...(dto.name && { name: dto.name }),
-        ...(dto.imageUrl && { imageUrl: dto.imageUrl }),
+        imageUrl: newImageUrl,
       },
     });
     return workspace;
