@@ -82,12 +82,22 @@ model WorkSession{
   status WorkSessionStatus @default(OPEN)
   checkIn DateTime @default(now())
   checkOut DateTime?
+  pauses  WorkPause[]
   shift WorkShift?
   totalMinutes Int @default(0)
   extraMinutes Int @default(0)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   @@index([userId, date])
+}
+
+model WorkPause{
+  id  String  @id @default(cuid())
+  sessionId String
+  startTime DateTime
+  endTime DateTime?
+
+  session WorkSession @relation(fields: [sessionId], references:[id])
 }
 
 model WorkSchedule{

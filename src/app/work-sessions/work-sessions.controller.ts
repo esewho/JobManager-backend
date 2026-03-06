@@ -3,6 +3,7 @@ import {
   Controller,
   Get,
   Param,
+  Patch,
   Post,
   Query,
   UseGuards,
@@ -58,5 +59,12 @@ export class WorkSessionsController {
     @Param('workspaceId') workspaceId: string,
   ) {
     return await this.workSessionsService.getMySessions(userId, workspaceId);
+  }
+  @Patch('pause/:workspaceId')
+  async workPause(
+    @User('userId') userId: string,
+    @Param('workspaceId') workspaceId: string,
+  ) {
+    return this.workSessionsService.pauseSession(userId, workspaceId);
   }
 }

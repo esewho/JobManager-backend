@@ -7,6 +7,8 @@ import {
 import { WorkSessionDto } from './Dto/work-session.dto';
 import { WorkHistoryDto } from './Dto/work-history.dto';
 import { prisma } from 'src/prisma/prisma';
+import { PausedSessionDto } from './Dto/paused-session.dto';
+import { TodaySessionDto } from './Dto/today-session.dto';
 
 function startOfDayUTC(date: Date) {
   return new Date(
@@ -81,16 +83,16 @@ export class WorkSessionsService {
     const end = new Date(start);
     end.setHours(23, 59, 59, 999);
 
-    const todaySession = await prisma.workSession.count({
-      where: {
-        userId: userId,
-        workspaceId: workspaceId,
-        checkIn: {
-          gte: start,
-          lte: end,
-        },
-      },
-    });
+    // const todaySession = await prisma.workSession.count({
+    //   where: {
+    //     userId: userId,
+    //     workspaceId: workspaceId,
+    //     checkIn: {
+    //       gte: start,
+    //       lte: end,
+    //     },
+    //   },
+    // });
     // if (todaySession >= 5) {
     //   throw new BadRequestException('User has already checked in twice today');
     // }
@@ -105,10 +107,12 @@ export class WorkSessionsService {
         extraMinutes: 0,
       },
     });
+
     return {
       id: session.id,
       checkIn: session.checkIn,
       checkOut: undefined,
+
       totalMinutes: session.totalMinutes,
       extraMinutes: session.extraMinutes,
       status: session.status,
@@ -126,6 +130,7 @@ export class WorkSessionsService {
         workspaceId,
         status: WorkSessionStatus.OPEN,
       },
+      include: { pauses: true },
     });
 
     if (!openSession) {
@@ -152,6 +157,7 @@ export class WorkSessionsService {
       id: updatedSession.id,
       checkIn: updatedSession.checkIn,
       checkOut: updatedSession.checkOut!,
+
       totalMinutes: updatedSession.totalMinutes,
       extraMinutes: updatedSession.extraMinutes,
       status: updatedSession.status,
@@ -159,16 +165,54 @@ export class WorkSessionsService {
     };
   }
 
+  async pauseSession(
+    userId: string,
+    workspaceId: string,
+  ): Promise<PausedSessionDto> {
+    const session = await prisma.workSession.findFirst({
+      where: {
+        userId,
+        workspaceId,
+        checkOut: null,
+      },
+      include: { pauses: true },
+    });
+    if (!session) {
+      throw new BadRequestException('No active session');
+    }
+    const activePause = session.pauses.find((p) => !p.endTime);
+
+    if (activePause) {
+      await prisma.workPause.update({
+        where: {
+          id: activePause.id,
+        },
+        data: { endTime: new Date() },
+      });
+      return { isPaused: false };
+    }
+    await prisma.workPause.create({
+      data: {
+        sessionId: session.id,
+        startTime: new Date(),
+      },
+    });
+    return { isPaused: true };
+  }
+
   async getSessionsByUser(userId: string): Promise<WorkSessionDto[]> {
     const sessions = await prisma.workSession.findMany({
       where: { userId },
+      include: { pauses: true },
       orderBy: { checkIn: 'desc' },
     });
+
     return sessions.map((session) => {
       return {
         id: session.id,
         checkIn: session.checkIn,
         checkOut: session.checkOut || undefined,
+        isPaused: session.pauses.some((p) => !p.endTime),
         totalMinutes: session.totalMinutes,
         extraMinutes: session.extraMinutes,
         status: session.status,
@@ -275,7 +319,7 @@ export class WorkSessionsService {
   async getTodaySession(
     userId: string,
     workspaceId: string,
-  ): Promise<WorkSessionDto | null> {
+  ): Promise<TodaySessionDto | null> {
     const now = new Date();
     const start = new Date(now);
     start.setHours(0, 0, 0, 0);
@@ -291,21 +335,27 @@ export class WorkSessionsService {
           lte: end,
         },
       },
+      include: { pauses: true },
       orderBy: { checkIn: 'desc' },
     });
     if (!session) {
       return {
         checkIn: null,
         checkOut: null,
+        isPaused: false,
         totalMinutes: 0,
         extraMinutes: 0,
         status: WorkSessionStatus.CLOSED,
         shift: null,
       };
     }
+    const isPaused = session?.pauses.some((p) => !p.endTime);
+    console.log(isPaused, 'tukissssss');
+
     return {
       checkIn: session.checkIn ?? null,
       checkOut: session.checkOut ?? null,
+      isPaused,
       totalMinutes: session.totalMinutes,
       extraMinutes: session.extraMinutes,
       status: session.status,
@@ -415,22 +465,30 @@ export class WorkSessionsService {
     if (!userOfWorkspace)
       throw new NotFoundException('User no encontrado en este workspace');
 
-    return await prisma.workSession.findMany({
-      where: { userId, workspaceId },
+    const sessions = await prisma.workSession.findMany({
+      where: {
+        userId,
+        workspaceId,
+      },
+      include: {
+        pauses: { where: { endTime: null }, select: { id: true } },
+        _count: { select: { pauses: true } },
+      },
       orderBy: {
         checkIn: 'desc',
       },
       take: 10,
-      select: {
-        id: true,
-        status: true,
-        checkIn: true,
-        checkOut: true,
-        totalMinutes: true,
-        extraMinutes: true,
-        date: true,
-        shift: true,
-      },
     });
+    return sessions.map((s) => ({
+      id: s.id,
+      checkIn: s.checkIn,
+      checkOut: s.checkOut || null,
+      totalMinutes: s.totalMinutes,
+      extraMinutes: s.extraMinutes,
+      status: s.status,
+      shift: s.shift,
+      isPaused: s.pauses.length > 0,
+      pauseCount: s._count.pauses,
+    }));
   }
 }
