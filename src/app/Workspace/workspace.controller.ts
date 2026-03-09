@@ -27,7 +27,6 @@ export class WorkspaceController {
   @Post('create')
   @UseGuards(RolesGuard)
   @Roles(Role.ADMIN)
-  @UseInterceptors(FileInterceptor('image'))
   async createWorkspace(
     @Body() dto: WorkspaceDto,
     @UploadedFile() file: Express.Multer.File,
@@ -50,11 +49,12 @@ export class WorkspaceController {
   @Patch('update/:workspaceId')
   @UseGuards(RolesGuard, WorkspaceGuard)
   @Roles(Role.ADMIN)
+  @UseInterceptors(FileInterceptor('image'))
   async updateWorkspace(
     @Body() dto: WorkspaceDto,
     @Param('workspaceId') workspaceId: string,
     @User('userId') userId: string,
-    @UploadedFile() file: Express.Multer.File,
+    @UploadedFile() file?: Express.Multer.File,
   ) {
     return await this.workspaceService.updateWorkspace(
       workspaceId,

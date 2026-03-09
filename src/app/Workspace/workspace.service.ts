@@ -92,11 +92,11 @@ export class WorkspaceService {
       const sanitizedName = file.originalname.replace(/\s+/g, '_');
       const filename = `${Date.now()}_${sanitizedName}`;
 
-      const filePath = path.join.apply(uploadPath, filename);
+      const filePath = path.join(uploadPath, filename);
 
       await fs.promises.writeFile(filePath, file.buffer);
 
-      newImageUrl = `/uploads${filename}`;
+      newImageUrl = `/uploads/${filename}`;
 
       if (existingWorkspace?.imageUrl) {
         const oldPath = path.join(process.cwd(), existingWorkspace.imageUrl);
@@ -117,8 +117,8 @@ export class WorkspaceService {
         id: workspaceId,
       },
       data: {
-        ...(dto.name && { name: dto.name }),
-        imageUrl: newImageUrl,
+        ...(dto?.name && { name: dto.name }),
+        ...(newImageUrl && { imageUrl: newImageUrl }),
       },
     });
     return workspace;

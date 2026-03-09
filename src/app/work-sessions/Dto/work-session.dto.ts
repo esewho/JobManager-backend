@@ -9,6 +9,6 @@ export class WorkSessionDto {
   extraMinutes: number;
   status: WorkSessionStatus;
   shift: WorkShift | null;
-  isPaused: boolean;
-  pauseCount: number;
+  isPaused?: boolean;
+  pauseCount?: number;
 }
