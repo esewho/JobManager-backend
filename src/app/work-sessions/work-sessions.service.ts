@@ -129,14 +129,41 @@ export class WorkSessionsService {
     const diffMs = now.getTime() - openSession.checkIn.getTime();
     const diffMins = Math.max(Math.floor(diffMs / 60000), 0);
 
-    const pausedMinutes = openSession.pauses.reduce((acc, p) => {
-      const end = p.endTime ?? now;
-      const diff = end.getTime() - p.startTime.getTime();
-      return acc + Math.floor(diff / 6000);
+    await prisma.workPause.updateMany({
+      where: {
+        sessionId: openSession.id,
+        endTime: null,
+      },
+      data: { endTime: now },
+    });
+
+    const session = await prisma.workSession.findUnique({
+      where: { id: openSession.id },
+      include: { pauses: true },
+    });
+
+    if (!session)
+      throw new BadRequestException(
+        'There is no open work session to this workspace',
+      );
+
+    const pausedMinutes = session.pauses.reduce((acc, p) => {
+      const diff = p.endTime.getTime() - p.startTime.getTime();
+      return acc + Math.floor(diff / 60000);
     }, 0);
 
     const workedMinutes = Math.max(diffMins - pausedMinutes, 0);
     const extraTime = Math.max(workedMinutes - WORKDAY_MINUTES, 0);
+
+    await prisma.workPause.updateMany({
+      where: {
+        sessionId: openSession.id,
+        endTime: null,
+      },
+      data: {
+        endTime: now,
+      },
+    });
 
     const updatedSession = await prisma.workSession.update({
       where: { id: openSession.id },
