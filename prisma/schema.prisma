@@ -21,6 +21,7 @@ enum Role {
   enum WorkSessionStatus {
   OPEN
   CLOSED
+  PAUSED
   }
 
   enum WorkShift {

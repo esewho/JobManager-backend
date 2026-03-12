@@ -9,6 +9,7 @@ import { WorkHistoryDto } from './Dto/work-history.dto';
 import { prisma } from 'src/prisma/prisma';
 import { PausedSessionDto } from './Dto/paused-session.dto';
 import { TodaySessionDto } from './Dto/today-session.dto';
+import { diff } from 'util';
 
 function startOfDayUTC(date: Date) {
   return new Date(
@@ -83,20 +84,6 @@ export class WorkSessionsService {
     const end = new Date(start);
     end.setHours(23, 59, 59, 999);
 
-    // const todaySession = await prisma.workSession.count({
-    //   where: {
-    //     userId: userId,
-    //     workspaceId: workspaceId,
-    //     checkIn: {
-    //       gte: start,
-    //       lte: end,
-    //     },
-    //   },
-    // });
-    // if (todaySession >= 5) {
-    //   throw new BadRequestException('User has already checked in twice today');
-    // }
-
     const session = await prisma.workSession.create({
       data: {
         userId: userId,
@@ -141,13 +128,21 @@ export class WorkSessionsService {
 
     const diffMs = now.getTime() - openSession.checkIn.getTime();
     const diffMins = Math.max(Math.floor(diffMs / 60000), 0);
-    const extraTime = Math.max(diffMins - WORKDAY_MINUTES, 0);
+
+    const pausedMinutes = openSession.pauses.reduce((acc, p) => {
+      const end = p.endTime ?? now;
+      const diff = end.getTime() - p.startTime.getTime();
+      return acc + Math.floor(diff / 6000);
+    }, 0);
+
+    const workedMinutes = Math.max(diffMins - pausedMinutes, 0);
+    const extraTime = Math.max(workedMinutes - WORKDAY_MINUTES, 0);
 
     const updatedSession = await prisma.workSession.update({
       where: { id: openSession.id },
       data: {
         checkOut: now,
-        totalMinutes: diffMins,
+        totalMinutes: workedMinutes,
         extraMinutes: extraTime,
         status: WorkSessionStatus.CLOSED,
       },
@@ -165,10 +160,7 @@ export class WorkSessionsService {
     };
   }
 
-  async pauseSession(
-    userId: string,
-    workspaceId: string,
-  ): Promise<PausedSessionDto> {
+  async pauseSession(userId: string, workspaceId: string) {
     const session = await prisma.workSession.findFirst({
       where: {
         userId,
@@ -177,26 +169,41 @@ export class WorkSessionsService {
       },
       include: { pauses: true },
     });
+
     if (!session) {
       throw new BadRequestException('No active session');
     }
+
     const activePause = session.pauses.find((p) => !p.endTime);
 
     if (activePause) {
+      // REANUDAR
       await prisma.workPause.update({
-        where: {
-          id: activePause.id,
-        },
+        where: { id: activePause.id },
         data: { endTime: new Date() },
       });
+
+      await prisma.workSession.update({
+        where: { id: session.id },
+        data: { status: 'OPEN' },
+      });
+
       return { isPaused: false };
     }
+
+    // PAUSAR
     await prisma.workPause.create({
       data: {
         sessionId: session.id,
         startTime: new Date(),
       },
     });
+
+    await prisma.workSession.update({
+      where: { id: session.id },
+      data: { status: 'PAUSED' },
+    });
+
     return { isPaused: true };
   }
 
