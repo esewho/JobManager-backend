@@ -7,10 +7,9 @@ import { WorkSessionsModule } from './app/work-sessions/work-sessions.module';
 import { TipPoolModule } from './app/tip-pool/tip-pool.module';
 import { AdminModule } from './app/admin/admin.module';
 import { UserDataModule } from './user/user-data.module';
-import { WeeklyHistoryModule } from './app/weekly-history/weekly-history.module';
-import { MonthlyHistoryModule } from './app/monthlyHistory/monthlyHistory.module';
 import { WorkspaceModule } from './app/Workspace/workspace.module';
 import { WorkSchedulesModule } from './app/work-schedules/work-schedules.module';
+import { HistoryCalendarModule } from './HistoryCalendar/history.module';
 
 @Module({
   imports: [
@@ -20,10 +19,9 @@ import { WorkSchedulesModule } from './app/work-schedules/work-schedules.module'
     TipPoolModule,
     AdminModule,
     UserDataModule,
-    WeeklyHistoryModule,
-    MonthlyHistoryModule,
     WorkspaceModule,
     WorkSchedulesModule,
+    HistoryCalendarModule,
   ],
   controllers: [AppController],
   providers: [AppService],

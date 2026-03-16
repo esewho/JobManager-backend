@@ -148,7 +148,9 @@ export class WorkSessionsService {
       );
 
     const pausedMinutes = session.pauses.reduce((acc, p) => {
-      const diff = p.endTime.getTime() - p.startTime.getTime();
+      const end = p.endTime ?? now;
+      const diff = end.getTime() - p.startTime.getTime();
+
       return acc + Math.floor(diff / 60000);
     }, 0);
 
