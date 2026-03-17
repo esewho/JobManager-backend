@@ -4,13 +4,19 @@ import { prisma } from 'src/prisma/prisma';
 
 @Injectable()
 export class HistoryCalendarService {
-  async getCalendarMonth(userId: string, month: number, year: number) {
+  async getCalendarMonth(
+    userId: string,
+    workspaceId: string,
+    month: number,
+    year: number,
+  ) {
     const monthStart = new Date(Date.UTC(year, month - 1, 1));
     const monthEnd = new Date(Date.UTC(year, month, 0, 23, 59, 59));
 
     const sessions = await prisma.workSession.findMany({
       where: {
         userId,
+        workspaceId,
         status: WorkSessionStatus.CLOSED,
         checkIn: {
           gte: monthStart,
@@ -51,5 +57,32 @@ export class HistoryCalendarService {
     }
 
     return days;
+  }
+
+  async getDayDetail(userId: string, workspaceId: string, date: string) {
+    const dayStart = new Date(date);
+    dayStart.setHours(0, 0, 0, 0);
+
+    const dayEnd = new Date(date);
+    dayEnd.setHours(23, 59, 59, 999);
+
+    const sessions = await prisma.workSession.findMany({
+      where: {
+        userId,
+        workspaceId,
+        checkIn: {
+          gte: dayStart,
+          lte: dayEnd,
+        },
+      },
+      include: { pauses: true },
+    });
+
+    return {
+      date,
+      workedMinutes: sessions.reduce((acc, s) => acc + s.totalMinutes, 0),
+      extraMinutes: sessions.reduce((acc, s) => acc + s.extraMinutes, 0),
+      sessions,
+    };
   }
 }
