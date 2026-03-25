@@ -118,6 +118,7 @@ export class AdminService {
         checkOut: true,
         totalMinutes: true,
         extraMinutes: true,
+        pauses: true,
 
         user: {
           select: {
