@@ -240,4 +240,23 @@ export class AdminService {
       role: u.role,
     }));
   }
+
+  async getCurrentSession(userId: string, workspaceId: string) {
+    const session = await prisma.workSession.findFirst({
+      where: { userId, workspaceId, status: WorkSessionStatus.OPEN },
+      include: {
+        pauses: true,
+        user: {
+          select: {
+            username: true,
+            id: true,
+          },
+        },
+      },
+    });
+    if (!session) {
+      throw new NotFoundException('Sesión no encontrada');
+    }
+    return session;
+  }
 }

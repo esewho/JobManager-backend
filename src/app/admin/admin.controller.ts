@@ -6,6 +6,7 @@ import {
   Param,
   Patch,
   Post,
+  Query,
   UseGuards,
 } from '@nestjs/common';
 import { RolesGuard } from '../common/guards/roles.guard';
@@ -68,5 +69,13 @@ export class AdminController {
   @Get('get-all-users-to-manage/:workspaceId')
   async getAllUsers(@Param('workspaceId') workspaceId: string) {
     return await this.AdminService.getAllUsersOfWorkspaceToManage(workspaceId);
+  }
+
+  @Get('current-session/:workspaceId')
+  async getCurrentSessionOfUser(
+    @User('userId') userId: string,
+    @Param('workspaceId') workspaceId: string,
+  ) {
+    return await this.AdminService.getCurrentSession(userId, workspaceId);
   }
 }
