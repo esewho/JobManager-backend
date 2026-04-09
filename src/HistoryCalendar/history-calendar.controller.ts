@@ -13,7 +13,7 @@ export class HistoryCalendarController {
   @Get('calendar')
   async getCalendarMonth(
     @User('userId') userId: string,
-    @Param('workspaceId') workspaceId: string,
+    @Query('workspaceId') workspaceId: string,
     @Query('month') month: number,
     @Query('year') year: number,
   ) {

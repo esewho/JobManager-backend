@@ -23,7 +23,10 @@ export class WorkspaceService {
       fs.mkdirSync(uploadPath, { recursive: true });
     }
 
+    console.log(file, '====================>>>>>>');
+
     const sanitizedOriginalName = file.originalname.replace(/\s+/g, '_');
+
     const filename = `${Date.now()}_${sanitizedOriginalName}`;
     const imageUrl: string | undefined = `/uploads/${filename}`;
 

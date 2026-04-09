@@ -1,0 +1,29 @@
+services:
+  backend:
+    build: .
+    container_name: jobmanager-backend
+    ports:
+      - '3000:3000'
+    volumes:
+      - .:/app
+    environment:
+      DATABASE_URL: postgresql://postgres:postgres@db:5432/jobmanager
+    depends_on:
+      - db
+    command: npm run start:dev
+
+  db:
+    image: postgres:15
+    container_name: jobmanager-db
+    restart: always
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: jobmanager
+    ports:
+      - '5432:5432'
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+volumes:
+  postgres_data:
