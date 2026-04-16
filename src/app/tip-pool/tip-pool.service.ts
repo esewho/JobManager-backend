@@ -13,7 +13,6 @@ function getDayRange(date: Date) {
 
 @Injectable()
 export class TipPoolService {
-
   async createTipPool(dto: TipPoolDto) {
     const date = new Date(dto.date);
     date.setHours(0, 0, 0, 0);
@@ -164,7 +163,7 @@ export class TipPoolService {
         },
         _sum: { amount: true },
       }),
-     prisma.tipDistribution.aggregate({
+      prisma.tipDistribution.aggregate({
         where: { userId },
         _sum: { amount: true },
       }),

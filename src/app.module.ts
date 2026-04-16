@@ -10,6 +10,7 @@ import { UserDataModule } from './user/user-data.module';
 import { WorkspaceModule } from './app/Workspace/workspace.module';
 import { WorkSchedulesModule } from './app/work-schedules/work-schedules.module';
 import { HistoryCalendarModule } from './HistoryCalendar/history.module';
+import { SettingsModule } from './app/userSettings/settings.module';
 
 @Module({
   imports: [
@@ -22,6 +23,7 @@ import { HistoryCalendarModule } from './HistoryCalendar/history.module';
     WorkspaceModule,
     WorkSchedulesModule,
     HistoryCalendarModule,
+    SettingsModule,
   ],
   controllers: [AppController],
   providers: [AppService],
