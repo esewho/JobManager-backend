@@ -21,6 +21,13 @@ export class SettingsService {
         id: userId,
       },
       data: { username: dto.username },
+      select: {
+        id: true,
+        username: true,
+        role: true,
+        active: true,
+        updatedAt: true,
+      },
     });
   }
   async changeUserPassword(dto: UserSettingsDto, userId: string) {
@@ -31,7 +38,7 @@ export class SettingsService {
       throw new NotFoundException('User not found');
     }
 
-    const isValid = await bcrypt.compare(dto.currentPassword, dto.newPassword);
+    const isValid = await bcrypt.compare(dto.currentPassword, user.password);
 
     if (!isValid) {
       throw new BadRequestException('Current password is incorrect');
@@ -44,6 +51,13 @@ export class SettingsService {
     return await prisma.user.update({
       where: { id: userId },
       data: { password: hashedPassword },
+      select: {
+        id: true,
+        username: true,
+        role: true,
+        active: true,
+        updatedAt: true,
+      },
     });
   }
 }
