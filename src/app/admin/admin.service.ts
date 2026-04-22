@@ -44,6 +44,7 @@ export class AdminService {
           select: {
             id: true,
             username: true,
+            avatarUrl: true,
             session: {
               where: {
                 workspaceId,
@@ -256,9 +257,29 @@ export class AdminService {
         },
       },
     });
+
     if (!session) {
       throw new NotFoundException('Sesión no encontrada');
     }
-    return session;
+
+    const now = new Date();
+
+    const totalMinutes =
+      (now.getTime() - new Date(session.checkIn).getTime()) / 1000 / 60;
+
+    const pauseMinutes = session.pauses.reduce((acc, pause) => {
+      const pauseEnd = pause.endTime ? new Date(pause.endTime) : now;
+      const diff =
+        (pauseEnd.getTime() - new Date(pause.startTime).getTime()) / 1000 / 60;
+
+      return acc + diff;
+    }, 0);
+
+    const workedMinutes = Math.max(totalMinutes - pauseMinutes, 0);
+
+    return {
+      ...session,
+      workedMinutes,
+    };
   }
 }
