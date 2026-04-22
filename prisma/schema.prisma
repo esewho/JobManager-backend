@@ -39,6 +39,7 @@ model User {
   id String @id @default(cuid())
   username String @unique
   password String
+  avatarUrl String?
   active Boolean @default(true)
   role Role @default(EMPLOYEE)
   session WorkSession[]

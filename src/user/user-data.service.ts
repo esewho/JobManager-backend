@@ -13,6 +13,7 @@ export class UserDataService {
         role: true,
         createdAt: true,
         active: true,
+        avatarUrl: true,
       },
     });
     if (!user) {
