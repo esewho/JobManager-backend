@@ -223,6 +223,7 @@ export class AdminService {
             id: true,
             username: true,
             active: true,
+            avatarUrl: true,
           },
         },
       },
@@ -238,6 +239,7 @@ export class AdminService {
       username: u.user.username,
       active: u.user.active,
       role: u.role,
+      avatarUrl: u.user.avatarUrl,
     }));
   }
 

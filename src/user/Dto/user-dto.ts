@@ -4,5 +4,5 @@ export class UserDto {
   role: string;
   createdAt: Date;
   active: boolean;
-  avatarUrl: string;
+  avatarUrl: string | null;
 }
