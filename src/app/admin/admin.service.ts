@@ -253,6 +253,7 @@ export class AdminService {
         user: {
           select: {
             username: true,
+            avatarUrl: true,
             id: true,
           },
         },
