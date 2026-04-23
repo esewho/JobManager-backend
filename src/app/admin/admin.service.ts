@@ -249,6 +249,7 @@ export class AdminService {
       where: { userId, workspaceId, status: WorkSessionStatus.OPEN },
       include: {
         pauses: true,
+        _count: true,
         user: {
           select: {
             username: true,

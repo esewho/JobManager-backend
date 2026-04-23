@@ -71,9 +71,9 @@ export class AdminController {
     return await this.AdminService.getAllUsersOfWorkspaceToManage(workspaceId);
   }
 
-  @Get('current-session/:workspaceId')
+  @Get('current-session/:workspaceId/:userId')
   async getCurrentSessionOfUser(
-    @User('userId') userId: string,
+    @Param('userId') userId: string,
     @Param('workspaceId') workspaceId: string,
   ) {
     return await this.AdminService.getCurrentSession(userId, workspaceId);
