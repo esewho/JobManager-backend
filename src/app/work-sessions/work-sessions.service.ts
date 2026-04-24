@@ -260,7 +260,8 @@ export class WorkSessionsService {
   async getMySummary(userId: string, workspaceId: string) {
     const now = new Date();
 
-    const startToday = startOfDayUTC(now);
+    const startToday = new Date(now);
+    startToday.setHours(0, 0, 0, 0);
 
     const startWeek = new Date(startToday);
     startWeek.setUTCDate(startWeek.getUTCDate() - startWeek.getUTCDay());
