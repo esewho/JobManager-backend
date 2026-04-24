@@ -246,7 +246,8 @@ export class AdminService {
 
   async getCurrentSession(userId: string, workspaceId: string) {
     const session = await prisma.workSession.findFirst({
-      where: { userId, workspaceId, status: WorkSessionStatus.OPEN },
+      where: { userId, workspaceId },
+      orderBy: [{ status: 'asc' }, { checkIn: 'desc' }],
       include: {
         pauses: true,
         _count: true,
@@ -264,13 +265,16 @@ export class AdminService {
       throw new NotFoundException('Sesión no encontrada');
     }
 
-    const now = new Date();
+    const isActive = session.status === 'OPEN';
+
+    const endTime = isActive ? new Date() : new Date(session.checkOut!);
 
     const totalMinutes =
-      (now.getTime() - new Date(session.checkIn).getTime()) / 1000 / 60;
+      (endTime.getTime() - new Date(session.checkIn).getTime()) / 1000 / 60;
 
     const pauseMinutes = session.pauses.reduce((acc, pause) => {
-      const pauseEnd = pause.endTime ? new Date(pause.endTime) : now;
+      const pauseEnd = pause.endTime ? new Date(pause.endTime) : endTime;
+
       const diff =
         (pauseEnd.getTime() - new Date(pause.startTime).getTime()) / 1000 / 60;
 
@@ -282,6 +286,9 @@ export class AdminService {
     return {
       ...session,
       workedMinutes,
+      totalMinutes,
+      pauseMinutes,
+      isActive,
     };
   }
 }
