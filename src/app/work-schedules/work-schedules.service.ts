@@ -144,6 +144,7 @@ export class WorkSchedulesService {
               select: {
                 id: true,
                 username: true,
+                avatarUrl: true,
               },
             },
           },

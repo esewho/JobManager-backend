@@ -78,11 +78,14 @@ export class HistoryCalendarService {
       include: { pauses: true },
     });
 
+    const pauses = sessions.flatMap((s) => s.pauses);
+
     return {
       date,
       workedMinutes: sessions.reduce((acc, s) => acc + s.totalMinutes, 0),
       extraMinutes: sessions.reduce((acc, s) => acc + s.extraMinutes, 0),
       sessions,
+      pauses,
     };
   }
 }

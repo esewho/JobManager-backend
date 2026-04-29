@@ -225,6 +225,7 @@ export class AdminService {
           select: {
             id: true,
             username: true,
+            email: true,
             active: true,
             avatarUrl: true,
           },
@@ -240,6 +241,7 @@ export class AdminService {
     return users.map((u) => ({
       id: u.user.id,
       username: u.user.username,
+      email: u.user.email,
       active: u.user.active,
       role: u.role,
       avatarUrl: u.user.avatarUrl,
@@ -269,18 +271,26 @@ export class AdminService {
 
     const isActive = session.status === 'OPEN';
 
-    const endTime = isActive ? new Date() : new Date(session.checkOut!);
+    const endTime =
+      isActive || !session.checkOut ? new Date() : new Date(session.checkOut);
 
-    const totalMinutes =
-      (endTime.getTime() - new Date(session.checkIn).getTime()) / 1000 / 60;
+    const startTime = new Date(session.checkIn);
+
+    const totalMinutes = Math.max(
+      (endTime.getTime() - startTime.getTime()) / 1000 / 60,
+      0,
+    );
 
     const pauseMinutes = session.pauses.reduce((acc, pause) => {
-      const pauseEnd = pause.endTime ? new Date(pause.endTime) : endTime;
+      const start = new Date(pause.startTime).getTime();
 
-      const diff =
-        (pauseEnd.getTime() - new Date(pause.startTime).getTime()) / 1000 / 60;
+      const end = pause.endTime
+        ? new Date(pause.endTime).getTime()
+        : endTime.getTime();
 
-      return acc + diff;
+      if (end < start) return acc; // evita negativos
+
+      return acc + (end - start) / 1000 / 60;
     }, 0);
 
     const workedMinutes = Math.max(totalMinutes - pauseMinutes, 0);
