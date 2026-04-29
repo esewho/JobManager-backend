@@ -7,9 +7,7 @@ import {
 import { WorkSessionDto } from './Dto/work-session.dto';
 import { WorkHistoryDto } from './Dto/work-history.dto';
 import { prisma } from 'src/prisma/prisma';
-import { PausedSessionDto } from './Dto/paused-session.dto';
 import { TodaySessionDto } from './Dto/today-session.dto';
-import { diff } from 'util';
 
 function startOfDayUTC(date: Date) {
   return new Date(
