@@ -506,13 +506,16 @@ export class WorkSessionsService {
         workspaceId,
       },
       include: {
+        user: {
+          select: { id: true, username: true, email: true, avatarUrl: true },
+        },
         pauses: { where: { endTime: null }, select: { id: true } },
         _count: { select: { pauses: true } },
       },
       orderBy: {
         checkIn: 'desc',
       },
-      take: 10,
+      take: 5,
     });
     return sessions.map((s) => ({
       id: s.id,
@@ -524,6 +527,7 @@ export class WorkSessionsService {
       shift: s.shift,
       isPaused: s.pauses.length > 0,
       pauseCount: s._count.pauses,
+      user: s.user,
     }));
   }
 }
