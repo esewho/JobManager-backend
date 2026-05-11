@@ -288,7 +288,7 @@ export class AdminService {
         ? new Date(pause.endTime).getTime()
         : endTime.getTime();
 
-      if (end < start) return acc; // evita negativos
+      if (end < start) return acc;
 
       return acc + (end - start) / 1000 / 60;
     }, 0);
