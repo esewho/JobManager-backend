@@ -62,15 +62,6 @@ export class WorkSessionsService {
       throw new BadRequestException('workspaceId is required');
     }
     if (openSession) {
-      await prisma.workSession.update({
-        where: { id: openSession.id },
-        data: {
-          status: WorkSessionStatus.CLOSED,
-          checkOut: now,
-        },
-      });
-    }
-    if (openSession) {
       throw new BadRequestException(
         'There is already an open work session for this user',
       );
@@ -126,14 +117,6 @@ export class WorkSessionsService {
 
     const diffMs = now.getTime() - openSession.checkIn.getTime();
     const diffMins = Math.max(Math.floor(diffMs / 60000), 0);
-
-    await prisma.workPause.updateMany({
-      where: {
-        sessionId: openSession.id,
-        endTime: null,
-      },
-      data: { endTime: now },
-    });
 
     const session = await prisma.workSession.findUnique({
       where: { id: openSession.id },

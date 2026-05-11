@@ -87,18 +87,25 @@ export class SettingsService {
 
     const avatarUrl = `/uploads/${filename}`;
 
-    return prisma.user.update({
-      where: {
-        id: userId,
-      },
-      data: {
-        avatarUrl,
-      },
-      select: {
-        id: true,
-        username: true,
-        avatarUrl: true,
-      },
-    });
+    try {
+      return await prisma.user.update({
+        where: {
+          id: userId,
+        },
+        data: {
+          avatarUrl,
+        },
+        select: {
+          id: true,
+          username: true,
+          avatarUrl: true,
+        },
+      });
+    } catch {
+      try {
+        fs.unlinkSync(filePath);
+      } catch {}
+      throw new BadRequestException('Failed to update avatar');
+    }
   }
 }

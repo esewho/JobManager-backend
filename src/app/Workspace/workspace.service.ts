@@ -17,27 +17,11 @@ export class WorkspaceService {
     userId: string,
     file: Express.Multer.File,
   ) {
-    const uploadPath = path.join(process.cwd(), 'uploads');
-
-    if (!fs.existsSync(uploadPath)) {
-      fs.mkdirSync(uploadPath, { recursive: true });
-    }
-
-    console.log(file, '====================>>>>>>');
-
-    const sanitizedOriginalName = file.originalname.replace(/\s+/g, '_');
-
-    const filename = `${Date.now()}_${sanitizedOriginalName}`;
-    const imageUrl: string | undefined = `/uploads/${filename}`;
-
-    fs.writeFileSync(path.join(uploadPath, filename), file.buffer);
-
     const user = await prisma.user.findUnique({
       where: {
         id: userId,
       },
     });
-    console.log(user);
     if (user?.role !== Role.ADMIN) {
       throw new Error('Only admins can create workspaces');
     }
@@ -50,6 +34,20 @@ export class WorkspaceService {
     if (existingWorkspace) {
       throw new Error('Workspace already exists');
     }
+
+    const uploadPath = path.join(process.cwd(), 'uploads');
+
+    if (!fs.existsSync(uploadPath)) {
+      fs.mkdirSync(uploadPath, { recursive: true });
+    }
+
+    const sanitizedOriginalName = file.originalname.replace(/\s+/g, '_');
+
+    const filename = `${Date.now()}_${sanitizedOriginalName}`;
+    const imageUrl: string | undefined = `/uploads/${filename}`;
+
+    fs.writeFileSync(path.join(uploadPath, filename), file.buffer);
+
     const workspace = await prisma.workspace.create({
       data: {
         name: dto.name,
@@ -88,6 +86,10 @@ export class WorkspaceService {
       },
     });
 
+    if (!existingWorkspace) {
+      throw new NotFoundException('Workspace not found');
+    }
+
     let newImageUrl = existingWorkspace?.imageUrl;
     if (file) {
       const uploadPath = path.join(process.cwd(), 'uploads');
@@ -110,10 +112,6 @@ export class WorkspaceService {
           console.warn('Old image not found');
         }
       }
-    }
-
-    if (!existingWorkspace) {
-      throw new NotFoundException('Workspace not found');
     }
     const workspace = await prisma.workspace.update({
       where: {
