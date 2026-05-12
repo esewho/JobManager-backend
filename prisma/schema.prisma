@@ -50,12 +50,27 @@ model User {
   updatedAt DateTime @updatedAt
 }
 
+model WorkspaceInvitation{
+  id String @id @default (cuid())
+  email String
+  token String @unique
+  role Role @default(EMPLOYEE)
+  accepted Boolean @default(false)
+  createdAt DateTime @default(now())
+  expiresAt DateTime
+  workspaceId String
+
+  workspace Workspace @relation(fields:[workspaceId], references:[id])
+
+}
+
 model Workspace{
   id String @id @default(cuid())
   name String 
   workSessions WorkSession[]
   imageUrl String?
   users UserWorkspace[]
+  invitations WorkspaceInvitation[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

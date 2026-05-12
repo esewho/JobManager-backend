@@ -11,6 +11,7 @@ import { WorkspaceModule } from './app/Workspace/workspace.module';
 import { WorkSchedulesModule } from './app/work-schedules/work-schedules.module';
 import { HistoryCalendarModule } from './HistoryCalendar/history.module';
 import { SettingsModule } from './app/userSettings/settings.module';
+import { InvitationModule } from './app/token-invitations/invitation/invitation.module';
 
 @Module({
   imports: [
@@ -24,6 +25,7 @@ import { SettingsModule } from './app/userSettings/settings.module';
     WorkSchedulesModule,
     HistoryCalendarModule,
     SettingsModule,
+    InvitationModule,
   ],
   controllers: [AppController],
   providers: [AppService],
