@@ -11,7 +11,7 @@ import { WorkspaceModule } from './app/Workspace/workspace.module';
 import { WorkSchedulesModule } from './app/work-schedules/work-schedules.module';
 import { HistoryCalendarModule } from './HistoryCalendar/history.module';
 import { SettingsModule } from './app/userSettings/settings.module';
-import { InvitationModule } from './app/token-invitations/invitation/invitation.module';
+import { InvitationModule } from './app/token-invitations/invitation.module';
 
 @Module({
   imports: [

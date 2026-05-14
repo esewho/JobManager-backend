@@ -29,7 +29,7 @@ export class InvitationController {
       workspaceId,
     );
   }
-  @UseGuards(JwtAuthGuard)
+
   @Get(':token')
   async getInvitationByToken(@Param('token') token: string) {
     return await this.invitationService.getInvitationByToken(token);
@@ -48,5 +48,12 @@ export class InvitationController {
   @Roles(Role.ADMIN)
   async deleteInvitation(@Param('id') id: string) {
     return await this.invitationService.deleteInvitation(id);
+  }
+
+  @Get('workspace/:workspaceId')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.ADMIN)
+  async listAllInvitations(@Param('workspaceId') workspaceId: string) {
+    return await this.invitationService.listAllInvitations(workspaceId);
   }
 }

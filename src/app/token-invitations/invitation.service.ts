@@ -109,4 +109,21 @@ export class InvitationService {
     });
     return { message: 'Invitation deleted successfully' };
   }
+
+  async listAllInvitations(workspaceId: string) {
+    if (!workspaceId) {
+      throw new BadRequestException('Workspace ID is required');
+    }
+    return await prisma.workspaceInvitation.findMany({
+      where: { workspaceId },
+      orderBy: { createdAt: 'desc' },
+      select: {
+        id: true,
+        email: true,
+        role: true,
+        expiresAt: true,
+        accepted: true,
+      },
+    });
+  }
 }
