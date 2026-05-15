@@ -10,8 +10,9 @@ export class HistoryCalendarService {
     month: number,
     year: number,
   ) {
-    const monthStart = new Date(Date.UTC(year, month - 1, 1));
-    const monthEnd = new Date(Date.UTC(year, month, 0, 23, 59, 59));
+    // LOCAL TIME
+    const monthStart = new Date(year, month - 1, 1);
+    const monthEnd = new Date(year, month, 0, 23, 59, 59);
 
     const sessions = await prisma.workSession.findMany({
       where: {
@@ -30,13 +31,16 @@ export class HistoryCalendarService {
     const daysInMonth = new Date(year, month, 0).getDate();
 
     for (let i = 1; i <= daysInMonth; i++) {
-      const dayStart = new Date(Date.UTC(year, month - 1, i));
-      const dayEnd = new Date(dayStart);
-      dayEnd.setUTCHours(23, 59, 59, 999);
+      const dayStart = new Date(year, month - 1, i);
 
-      const daySessions = sessions.filter(
-        (s) => s.checkIn >= dayStart && s.checkIn <= dayEnd,
-      );
+      const dayEnd = new Date(year, month - 1, i);
+      dayEnd.setHours(23, 59, 59, 999);
+
+      const daySessions = sessions.filter((s) => {
+        const checkIn = new Date(s.checkIn);
+
+        return checkIn >= dayStart && checkIn <= dayEnd;
+      });
 
       const workedMinutes = daySessions.reduce(
         (acc, s) => acc + s.totalMinutes,
@@ -48,8 +52,12 @@ export class HistoryCalendarService {
         0,
       );
 
+      const formattedDate = `${dayStart.getFullYear()}-${String(
+        dayStart.getMonth() + 1,
+      ).padStart(2, '0')}-${String(dayStart.getDate()).padStart(2, '0')}`;
+
       days.push({
-        date: dayStart.toISOString().slice(0, 10),
+        date: formattedDate,
         workedMinutes,
         extraMinutes,
         sessions: daySessions.length,
@@ -75,7 +83,9 @@ export class HistoryCalendarService {
           lte: dayEnd,
         },
       },
-      include: { pauses: true },
+      include: {
+        pauses: true,
+      },
     });
 
     const pauses = sessions.flatMap((s) => s.pauses);
@@ -83,7 +93,9 @@ export class HistoryCalendarService {
     return {
       date,
       workedMinutes: sessions.reduce((acc, s) => acc + s.totalMinutes, 0),
+
       extraMinutes: sessions.reduce((acc, s) => acc + s.extraMinutes, 0),
+
       sessions,
       pauses,
     };

@@ -7,9 +7,12 @@ import { randomUUID } from 'crypto';
 import { prisma } from 'src/prisma/prisma';
 import { AcceptInvitationDto } from './Dto/acceptInvitation.dto';
 import * as bcrypt from 'bcrypt';
+import { Resend } from 'resend';
+import { JwtService } from '@nestjs/jwt';
 
 @Injectable()
 export class InvitationService {
+  constructor(private jwt: JwtService) {}
   async createInvitation(email: string, workspaceId: string) {
     if (!email || !workspaceId) {
       throw new BadRequestException('Email and workspaceId are required');
@@ -28,7 +31,7 @@ export class InvitationService {
 
     const token = randomUUID();
 
-    return await prisma.workspaceInvitation.create({
+    const invitation = await prisma.workspaceInvitation.create({
       data: {
         email,
         workspaceId,
@@ -36,6 +39,18 @@ export class InvitationService {
         expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // Expira en 7 dias
       },
     });
+
+    const resend = new Resend(process.env.RESEND_API_KEY);
+
+    await resend.emails.send({
+      from: 'JobManager <onboarding@resend.dev>',
+      to: [email],
+      subject: 'You have been invited to join a workspace',
+      html: `<p>You have been invited to join a workspace. Please click the link below to accept the invitation:</p>
+              <p><a href="http://localhost:3000/invitations/accept/token=${token}">Accept Invitation</a></p>`,
+    });
+
+    return invitation;
   }
 
   async getInvitationByToken(token: string) {
@@ -94,7 +109,13 @@ export class InvitationService {
       where: { id: invitation.id },
       data: { accepted: true },
     });
-    return { message: 'Invitation accepted successfully' };
+
+    const accessToken = this.jwt.sign({
+      sub: user.id,
+      role: user.role,
+      workspaceId: invitation.workspaceId,
+    });
+    return { message: 'Invitation accepted successfully', accessToken };
   }
 
   async deleteInvitation(id: string) {
