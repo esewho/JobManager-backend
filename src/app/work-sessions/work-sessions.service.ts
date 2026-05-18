@@ -344,18 +344,31 @@ export class WorkSessionsService {
     const end = new Date(start);
     end.setHours(23, 59, 59, 999);
 
-    const session = await prisma.workSession.findFirst({
+    let session = await prisma.workSession.findFirst({
       where: {
         userId,
         workspaceId,
-        checkIn: {
-          gte: start,
-          lte: end,
-        },
+        status: WorkSessionStatus.OPEN,
       },
       include: { pauses: true },
       orderBy: { checkIn: 'desc' },
     });
+
+    if (!session) {
+      session = await prisma.workSession.findFirst({
+        where: {
+          userId,
+          workspaceId,
+          checkIn: {
+            gte: start,
+            lte: end,
+          },
+        },
+        include: { pauses: true },
+        orderBy: { checkIn: 'desc' },
+      });
+    }
+
     if (!session) {
       return {
         checkIn: null,

@@ -5,6 +5,7 @@ import { JwtService } from '@nestjs/jwt';
 import { AuthService } from 'src/app/auth/auth.service';
 import { prisma } from 'src/prisma/prisma';
 import { Role } from '@prisma/client';
+import * as bcrypt from 'bcrypt';
 
 jest.mock('bcrypt', () => ({
   hash: jest.fn().mockResolvedValue('hashed-password'),
@@ -132,6 +133,7 @@ describe('AuthService', () => {
       await expect(
         service.login({
           email: 'test@gmail.com',
+          username: 'testuser',
           password: 'password123',
         }),
       ).rejects.toThrow(BadRequestException);
@@ -147,13 +149,12 @@ describe('AuthService', () => {
         active: true,
       });
 
-      const bcrypt = require('bcrypt');
-
       (bcrypt.compare as jest.Mock).mockResolvedValue(false);
 
       await expect(
         service.login({
           email: 'test@gmail.com',
+          username: 'testuser',
           password: 'wrong-password',
         }),
       ).rejects.toThrow(BadRequestException);
@@ -168,8 +169,6 @@ describe('AuthService', () => {
         role: 'EMPLOYEE',
         active: true,
       });
-
-      const bcrypt = require('bcrypt');
 
       (bcrypt.compare as jest.Mock).mockResolvedValue(true);
 
