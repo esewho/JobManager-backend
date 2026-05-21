@@ -21,6 +21,9 @@ jest.mock('src/prisma/prisma', () => ({
       update: jest.fn(),
       updateMany: jest.fn(),
     },
+    tipDistribution: {
+      aggregate: jest.fn(),
+    },
   },
 }));
 
@@ -133,6 +136,187 @@ describe('WorkSessionsService', () => {
           status: 'CLOSED',
           shift: null,
         });
+      });
+      it('should throw if user has no open session in the workspace', async () => {
+        (prisma.workSession.findFirst as jest.Mock).mockResolvedValue(null);
+        await expect(service.checkOut('user-1', 'workspace-1')).rejects.toThrow(
+          BadRequestException,
+        );
+      });
+    });
+    it('should pause the session of the user and return isPaused true', async () => {
+      const now = new Date();
+
+      (prisma.workSession.findFirst as jest.Mock).mockResolvedValue({
+        id: 'session-1',
+        userId: 'user-1',
+        workspaceId: 'workspace-1',
+        checkIn: new Date(now.getTime() - 2 * 60 * 60 * 1000),
+        checkOut: null,
+        status: 'OPEN',
+        pauses: [],
+      });
+
+      (prisma.workPause.create as jest.Mock).mockResolvedValue({
+        id: 'pause-1',
+        sessionId: 'session-1',
+        startTime: now,
+        endTime: null,
+      });
+
+      (prisma.workSession.update as jest.Mock).mockResolvedValue({
+        id: 'session-1',
+        status: 'PAUSED',
+      });
+
+      const result = await service.pauseSession('user-1', 'workspace-1');
+
+      expect(prisma.workSession.findFirst).toHaveBeenCalledWith({
+        where: {
+          userId: 'user-1',
+          workspaceId: 'workspace-1',
+          checkOut: null,
+        },
+        include: {
+          pauses: true,
+        },
+      });
+
+      expect(prisma.workPause.create).toHaveBeenCalledWith({
+        data: {
+          sessionId: 'session-1',
+          startTime: expect.any(Date),
+        },
+      });
+
+      expect(prisma.workSession.update).toHaveBeenCalledWith({
+        where: {
+          id: 'session-1',
+        },
+        data: {
+          status: 'PAUSED',
+        },
+      });
+
+      expect(result).toEqual({
+        isPaused: true,
+      });
+    });
+  });
+
+  describe('getSessionsbyUser', () => {
+    it('should throw if userId is not provided', async () => {
+      await expect(service.getSessionsByUser('')).rejects.toThrow(
+        BadRequestException,
+      );
+    });
+    it('should return all sessions of the user', async () => {
+      (prisma.workSession.findMany as jest.Mock).mockResolvedValue([
+        {
+          id: 'session-1',
+          userId: 'user-1',
+          workspaceId: 'workspace-1',
+          checkIn: new Date(),
+          checkOut: null,
+          totalMinutes: 0,
+          extraMinutes: 0,
+          status: 'OPEN',
+          shift: null,
+          pauses: [],
+        },
+        {
+          id: 'session-2',
+          userId: 'user-1',
+          workspaceId: 'workspace-2',
+          checkIn: new Date(),
+          checkOut: null,
+          totalMinutes: 0,
+          extraMinutes: 0,
+          status: 'OPEN',
+          shift: null,
+          pauses: [{ id: 'pause-1', endTime: null }],
+        },
+      ]);
+      const result = await service.getSessionsByUser('user-1');
+
+      expect(prisma.workSession.findMany).toHaveBeenCalledWith({
+        where: {
+          userId: 'user-1',
+        },
+        include: {
+          pauses: true,
+        },
+        orderBy: {
+          checkIn: 'desc',
+        },
+      });
+
+      expect(result).toEqual([
+        {
+          id: 'session-1',
+          checkIn: expect.any(Date),
+          checkOut: undefined,
+          isPaused: false,
+          totalMinutes: 0,
+          extraMinutes: 0,
+          status: 'OPEN',
+          shift: null,
+        },
+        {
+          id: 'session-2',
+          checkIn: expect.any(Date),
+          checkOut: undefined,
+          isPaused: true,
+          totalMinutes: 0,
+          extraMinutes: 0,
+          status: 'OPEN',
+          shift: null,
+        },
+      ]);
+    });
+  });
+
+  describe('getMySessions', () => {
+    it('should return he summary of the user', async () => {
+      (prisma.workSession.aggregate as jest.Mock)
+        .mockResolvedValueOnce({
+          _sum: {
+            totalMinutes: 480,
+            extraMinutes: 60,
+          },
+        })
+        .mockResolvedValueOnce({
+          _sum: {
+            totalMinutes: 2400,
+            extraMinutes: 300,
+          },
+        })
+        .mockResolvedValueOnce({
+          _sum: {
+            totalMinutes: 9600,
+            extraMinutes: 300,
+          },
+        });
+      const result = await service.getMySummary('user-1', 'workspace-1');
+
+      expect(prisma.workSession.aggregate).toHaveBeenCalledTimes(3);
+
+      expect(result).toEqual({
+        today: {
+          date: expect.any(Date),
+          workedMinutes: 480,
+          extraMinutes: 60,
+        },
+        thisWeek: {
+          date: expect.any(Date),
+          workedMinutes: 2400,
+          extraMinutes: 300,
+        },
+        thisMonth: {
+          date: expect.any(Date),
+          workedMinutes: 9600,
+          extraMinutes: 300,
+        },
       });
     });
   });

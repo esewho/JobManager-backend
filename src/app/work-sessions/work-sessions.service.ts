@@ -218,6 +218,9 @@ export class WorkSessionsService {
   }
 
   async getSessionsByUser(userId: string): Promise<WorkSessionDto[]> {
+    if (!userId) {
+      throw new BadRequestException('userId is required');
+    }
     const sessions = await prisma.workSession.findMany({
       where: { userId },
       include: { pauses: true },
@@ -251,85 +254,81 @@ export class WorkSessionsService {
       Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1),
     );
 
-    const [todayHours, weekHours, monthHours, todayTips, weekTips, monthTips] =
-      await Promise.all([
-        prisma.workSession.aggregate({
-          where: {
-            userId,
-            workspaceId,
-            status: WorkSessionStatus.CLOSED,
-            checkIn: { gte: startToday },
-          },
-          _sum: {
-            totalMinutes: true,
-            extraMinutes: true,
-          },
-        }),
-        prisma.workSession.aggregate({
-          where: {
-            userId,
-            workspaceId,
-            status: WorkSessionStatus.CLOSED,
-            checkIn: { gte: startWeek },
-          },
-          _sum: {
-            totalMinutes: true,
-            extraMinutes: true,
-          },
-        }),
-        prisma.workSession.aggregate({
-          where: {
-            userId,
-            workspaceId,
-            status: WorkSessionStatus.CLOSED,
-            checkIn: { gte: startMonth },
-          },
-          _sum: {
-            totalMinutes: true,
-            extraMinutes: true,
-          },
-        }),
-        prisma.tipDistribution.aggregate({
-          where: {
-            userId,
-            tipPool: { date: { gte: startToday } },
-          },
-          _sum: { amount: true },
-        }),
-        prisma.tipDistribution.aggregate({
-          where: {
-            userId,
-            tipPool: { date: { gte: startWeek } },
-          },
-          _sum: { amount: true },
-        }),
-        prisma.tipDistribution.aggregate({
-          where: {
-            userId,
-            tipPool: { date: { gte: startMonth } },
-          },
-          _sum: { amount: true },
-        }),
-      ]);
+    const [todayHours, weekHours, monthHours] = await Promise.all([
+      prisma.workSession.aggregate({
+        where: {
+          userId,
+          workspaceId,
+          status: WorkSessionStatus.CLOSED,
+          checkIn: { gte: startToday },
+        },
+        _sum: {
+          totalMinutes: true,
+          extraMinutes: true,
+        },
+      }),
+      prisma.workSession.aggregate({
+        where: {
+          userId,
+          workspaceId,
+          status: WorkSessionStatus.CLOSED,
+          checkIn: { gte: startWeek },
+        },
+        _sum: {
+          totalMinutes: true,
+          extraMinutes: true,
+        },
+      }),
+      prisma.workSession.aggregate({
+        where: {
+          userId,
+          workspaceId,
+          status: WorkSessionStatus.CLOSED,
+          checkIn: { gte: startMonth },
+        },
+        _sum: {
+          totalMinutes: true,
+          extraMinutes: true,
+        },
+      }),
+      prisma.tipDistribution.aggregate({
+        where: {
+          userId,
+          tipPool: { date: { gte: startToday } },
+        },
+        _sum: { amount: true },
+      }),
+      prisma.tipDistribution.aggregate({
+        where: {
+          userId,
+          tipPool: { date: { gte: startWeek } },
+        },
+        _sum: { amount: true },
+      }),
+      prisma.tipDistribution.aggregate({
+        where: {
+          userId,
+          tipPool: { date: { gte: startMonth } },
+        },
+        _sum: { amount: true },
+      }),
+    ]);
 
     return {
       today: {
         date: startToday,
         workedMinutes: todayHours._sum.totalMinutes ?? 0,
         extraMinutes: todayHours._sum.extraMinutes ?? 0,
-        tips: todayTips._sum.amount ?? 0,
       },
       thisWeek: {
         date: startWeek,
         workedMinutes: weekHours._sum.totalMinutes ?? 0,
         extraMinutes: weekHours._sum.extraMinutes ?? 0,
-        tips: weekTips._sum.amount ?? 0,
       },
       thisMonth: {
         date: startMonth,
         workedMinutes: monthHours._sum.totalMinutes ?? 0,
         extraMinutes: monthHours._sum.extraMinutes ?? 0,
-        tips: monthTips._sum.amount ?? 0,
       },
     };
   }
