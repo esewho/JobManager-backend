@@ -291,27 +291,6 @@ export class WorkSessionsService {
           extraMinutes: true,
         },
       }),
-      prisma.tipDistribution.aggregate({
-        where: {
-          userId,
-          tipPool: { date: { gte: startToday } },
-        },
-        _sum: { amount: true },
-      }),
-      prisma.tipDistribution.aggregate({
-        where: {
-          userId,
-          tipPool: { date: { gte: startWeek } },
-        },
-        _sum: { amount: true },
-      }),
-      prisma.tipDistribution.aggregate({
-        where: {
-          userId,
-          tipPool: { date: { gte: startMonth } },
-        },
-        _sum: { amount: true },
-      }),
     ]);
 
     return {
@@ -404,12 +383,15 @@ export class WorkSessionsService {
       case 'today':
         from = startOfDayUTC(now);
         break;
+
       case 'week':
         from = startOfWeekUTC(now);
         break;
+
       case 'month':
         from = startOfMonthUTC(now);
         break;
+
       default:
         throw new BadRequestException('Invalid period');
     }
@@ -422,67 +404,33 @@ export class WorkSessionsService {
       },
     });
 
-    const tips = await prisma.tipDistribution.findMany({
-      where: {
-        userId,
-        tipPool: {
-          date: { gte: from },
-        },
-      },
-      include: {
-        tipPool: true,
-      },
-    });
-
     const history = new Map<string, WorkHistoryDto>();
 
-    // sesiones → tiempo
     for (const s of sessions) {
       const dayKey = startOfDayUTC(s.checkIn).toISOString();
 
       if (!history.has(dayKey)) {
         history.set(dayKey, {
-          checkIn: now,
-          checkOut: null,
-          id: sessions[0].id,
-          shift: null,
+          checkIn: s.checkIn,
+          checkOut: s.checkOut ?? null,
+          id: s.id,
+          shift: s.shift,
           date: startOfDayUTC(s.checkIn),
           totalMinutes: 0,
           extraMinutes: 0,
-          tips: 0,
         });
       }
 
       const entry = history.get(dayKey)!;
+
       entry.totalMinutes += s.totalMinutes;
       entry.extraMinutes += s.extraMinutes;
-    }
-
-    // tips → dinero
-    for (const t of tips) {
-      const dayKey = startOfDayUTC(t.tipPool.date).toISOString();
-
-      if (!history.has(dayKey)) {
-        history.set(dayKey, {
-          checkIn: now,
-          checkOut: null,
-          id: '',
-          shift: null,
-          date: startOfDayUTC(t.tipPool.date),
-          totalMinutes: 0,
-          extraMinutes: 0,
-          tips: 0,
-        });
-      }
-
-      history.get(dayKey)!.tips += t.amount;
     }
 
     return Array.from(history.values()).sort(
       (a, b) => b.date.getTime() - a.date.getTime(),
     );
   }
-
   async getMySessions(
     userId: string,
     workspaceId: string,

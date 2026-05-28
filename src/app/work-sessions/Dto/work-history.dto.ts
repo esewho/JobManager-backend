@@ -8,5 +8,4 @@ export class WorkHistoryDto {
   totalMinutes: number;
   extraMinutes: number;
   shift: WorkShift | null;
-  tips: number;
 }

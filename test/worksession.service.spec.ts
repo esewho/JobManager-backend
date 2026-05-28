@@ -22,9 +22,6 @@ jest.mock('src/prisma/prisma', () => ({
       update: jest.fn(),
       updateMany: jest.fn(),
     },
-    tipDistribution: {
-      aggregate: jest.fn(),
-    },
   },
 }));
 
@@ -505,6 +502,238 @@ describe('WorkSessionsService', () => {
       expect(result).toEqual({
         isPaused: false,
       });
+    });
+  });
+
+  describe('getMySummary', () => {
+    it('should return today, week and month summary of the user', async () => {
+      (prisma.workSession.aggregate as jest.Mock)
+        .mockResolvedValueOnce({
+          _sum: {
+            totalMinutes: 480,
+            extraMinutes: 60,
+          },
+        })
+        .mockResolvedValueOnce({
+          _sum: {
+            totalMinutes: 2400,
+            extraMinutes: 120,
+          },
+        })
+        .mockResolvedValueOnce({
+          _sum: {
+            totalMinutes: 9600,
+            extraMinutes: 600,
+          },
+        });
+
+      const result = await service.getMySummary('user-1', 'workspace-1');
+
+      expect(prisma.workSession.aggregate).toHaveBeenCalledTimes(3);
+
+      expect(prisma.workSession.aggregate).toHaveBeenNthCalledWith(
+        1,
+        expect.objectContaining({
+          where: expect.objectContaining({
+            userId: 'user-1',
+            workspaceId: 'workspace-1',
+            status: WorkSessionStatus.CLOSED,
+          }),
+        }),
+      );
+
+      expect(prisma.workSession.aggregate).toHaveBeenNthCalledWith(
+        2,
+        expect.objectContaining({
+          where: expect.objectContaining({
+            userId: 'user-1',
+            workspaceId: 'workspace-1',
+            status: WorkSessionStatus.CLOSED,
+          }),
+        }),
+      );
+
+      expect(prisma.workSession.aggregate).toHaveBeenNthCalledWith(
+        3,
+        expect.objectContaining({
+          where: expect.objectContaining({
+            userId: 'user-1',
+            workspaceId: 'workspace-1',
+            status: WorkSessionStatus.CLOSED,
+          }),
+        }),
+      );
+
+      expect(result).toEqual({
+        today: {
+          date: expect.any(Date),
+          workedMinutes: 480,
+          extraMinutes: 60,
+        },
+        thisWeek: {
+          date: expect.any(Date),
+          workedMinutes: 2400,
+          extraMinutes: 120,
+        },
+        thisMonth: {
+          date: expect.any(Date),
+          workedMinutes: 9600,
+          extraMinutes: 600,
+        },
+      });
+    });
+
+    it('should return 0 values when aggregates are null', async () => {
+      (prisma.workSession.aggregate as jest.Mock)
+        .mockResolvedValueOnce({
+          _sum: {
+            totalMinutes: null,
+            extraMinutes: null,
+          },
+        })
+        .mockResolvedValueOnce({
+          _sum: {
+            totalMinutes: null,
+            extraMinutes: null,
+          },
+        })
+        .mockResolvedValueOnce({
+          _sum: {
+            totalMinutes: null,
+            extraMinutes: null,
+          },
+        });
+
+      const result = await service.getMySummary('user-1', 'workspace-1');
+
+      expect(result).toEqual({
+        today: {
+          date: expect.any(Date),
+          workedMinutes: 0,
+          extraMinutes: 0,
+        },
+        thisWeek: {
+          date: expect.any(Date),
+          workedMinutes: 0,
+          extraMinutes: 0,
+        },
+        thisMonth: {
+          date: expect.any(Date),
+          workedMinutes: 0,
+          extraMinutes: 0,
+        },
+      });
+    });
+  });
+
+  describe('getMyHistory', () => {
+    it('should return grouped history for today', async () => {
+      const today = new Date();
+
+      (prisma.workSession.findMany as jest.Mock).mockResolvedValue([
+        {
+          id: 'session-1',
+          checkIn: today,
+          checkOut: null,
+          shift: null,
+          totalMinutes: 480,
+          extraMinutes: 60,
+          status: WorkSessionStatus.CLOSED,
+        },
+        {
+          id: 'session-2',
+          checkIn: today,
+          checkOut: null,
+          shift: null,
+          totalMinutes: 120,
+          extraMinutes: 0,
+          status: WorkSessionStatus.CLOSED,
+        },
+      ]);
+
+      const result = await service.getMyHistory('user-1', 'today');
+
+      expect(prisma.workSession.findMany).toHaveBeenCalledWith({
+        where: {
+          userId: 'user-1',
+          status: WorkSessionStatus.CLOSED,
+          checkIn: {
+            gte: expect.any(Date),
+          },
+        },
+      });
+
+      expect(result).toEqual([
+        {
+          checkIn: expect.any(Date),
+          checkOut: null,
+          id: 'session-1',
+          shift: null,
+          date: expect.any(Date),
+          totalMinutes: 600,
+          extraMinutes: 60,
+        },
+      ]);
+    });
+
+    it('should return an empty array if no history exists', async () => {
+      (prisma.workSession.findMany as jest.Mock).mockResolvedValue([]);
+
+      const result = await service.getMyHistory('user-1', 'today');
+
+      expect(result).toEqual([]);
+    });
+
+    it('should throw if period is invalid', async () => {
+      await expect(
+        service.getMyHistory('user-1', 'invalid' as 'today'),
+      ).rejects.toThrow(BadRequestException);
+    });
+
+    it('should group sessions from different days separately', async () => {
+      const today = new Date();
+
+      const yesterday = new Date();
+      yesterday.setDate(yesterday.getDate() - 1);
+
+      (prisma.workSession.findMany as jest.Mock).mockResolvedValue([
+        {
+          id: 'session-1',
+          checkIn: today,
+          checkOut: null,
+          shift: null,
+          totalMinutes: 480,
+          extraMinutes: 60,
+          status: WorkSessionStatus.CLOSED,
+        },
+        {
+          id: 'session-2',
+          checkIn: yesterday,
+          checkOut: null,
+          shift: null,
+          totalMinutes: 300,
+          extraMinutes: 30,
+          status: WorkSessionStatus.CLOSED,
+        },
+      ]);
+
+      const result = await service.getMyHistory('user-1', 'week');
+
+      expect(result).toHaveLength(2);
+
+      expect(result[0]).toEqual(
+        expect.objectContaining({
+          totalMinutes: expect.any(Number),
+          extraMinutes: expect.any(Number),
+        }),
+      );
+
+      expect(result[1]).toEqual(
+        expect.objectContaining({
+          totalMinutes: expect.any(Number),
+          extraMinutes: expect.any(Number),
+        }),
+      );
     });
   });
 });
