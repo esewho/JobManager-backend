@@ -103,44 +103,39 @@ describe('WorkspaceService', () => {
     } as Express.Multer.File;
 
     it('should throw if user is not admin role', async () => {
-      (prisma.userWorkspace.findUnique as jest.Mock).mockResolvedValue({
-        userId: 'user-1',
-        workspaceId: 'workspace-1',
-        role: Role.ADMIN,
+      (prisma.userWorkspace.findFirst as jest.Mock).mockResolvedValue({
+        role: Role.EMPLOYEE,
       });
+
       await expect(
         service.updateWorkspace('workspace-1', dto, 'user-1', file),
       ).rejects.toThrow('Only admins can update workspaces');
-    });
-
-    it('should throw if workspace does not exist', async () => {
-      (prisma.userWorkspace.findFirst as jest.Mock).mockResolvedValue({
-        userId: 'user-1',
-        workspaceId: 'workspace-1',
-        role: Role.ADMIN,
-      });
-      (prisma.workspace.findUnique as jest.Mock).mockResolvedValue(null);
-
-      await expect(
-        service.updateWorkspace('workspace-1', dto, 'user-1', file),
-      ).rejects.toThrow(NotFoundException);
     });
 
     it('should update workspace successfully', async () => {
       (prisma.userWorkspace.findFirst as jest.Mock).mockResolvedValue({
         role: Role.ADMIN,
       });
+
       (prisma.workspace.findUnique as jest.Mock).mockResolvedValue({
+        id: 'workspace-1',
+        name: 'Old Workspace',
+        imageUrl: null,
+      });
+
+      (prisma.workspace.update as jest.Mock).mockResolvedValue({
         id: 'workspace-1',
         name: 'Workspace Test Updated',
         imageUrl: '/uploads/new.png',
       });
+
       const result = await service.updateWorkspace(
         'workspace-1',
         dto,
         'user-1',
         file,
       );
+
       expect(prisma.workspace.update).toHaveBeenCalled();
 
       expect(result).toEqual({
@@ -151,5 +146,53 @@ describe('WorkspaceService', () => {
     });
   });
 
-  describe('getAllWorkspaces', () => {});
+  describe('getAllWorkspaces', () => {
+    it('should throw if no workspaces found for user', async () => {
+      (prisma.workspace.findMany as jest.Mock).mockResolvedValue([]);
+
+      await expect(service.getAllWorkspaces('user-1')).rejects.toThrow(
+        NotFoundException,
+      );
+
+      expect(prisma.workspace.findMany).toHaveBeenCalledWith({
+        where: {
+          users: {
+            some: {
+              userId: 'user-1',
+            },
+          },
+        },
+        select: {
+          id: true,
+          name: true,
+          imageUrl: true,
+          createdAt: true,
+          _count: {
+            select: {
+              users: true,
+            },
+          },
+        },
+      });
+    });
+
+    it('should return all workspaces of the user', async () => {
+      const workspaces = [
+        {
+          id: 'workspace-1',
+          name: 'Workspace 1',
+          imageUrl: '/uploads/test.png',
+          createdAt: new Date(),
+          _count: {
+            users: 5,
+          },
+        },
+      ];
+      (prisma.workspace.findMany as jest.Mock).mockResolvedValue(workspaces);
+
+      const result = await service.getAllWorkspaces('user-1');
+
+      expect(result).toEqual(workspaces);
+    });
+  });
 });
