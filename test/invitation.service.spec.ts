@@ -1,5 +1,3 @@
-// invitation.service.spec.ts
-
 import { Test, TestingModule } from '@nestjs/testing';
 import { BadRequestException, NotFoundException } from '@nestjs/common';
 
@@ -193,6 +191,137 @@ describe('InvitationService', () => {
       const result = await service.listAllInvitations('workspace-id');
 
       expect(result).toEqual(invitations);
+    });
+  });
+
+  describe('acceptInvitation', () => {
+    it('should throw if invitation not found', async () => {
+      jest
+        .spyOn(service as any, 'getInvitationByToken')
+        .mockRejectedValue(new NotFoundException('Invitation not found'));
+
+      await expect(
+        service.acceptInvitation('invalid-token', {
+          email: 'test@gmail.com',
+          username: 'testuser',
+          password: 'hashed-password',
+        }),
+      ).rejects.toThrow(NotFoundException);
+
+      expect(service['getInvitationByToken']).toHaveBeenCalledWith(
+        'invalid-token',
+      );
+    });
+
+    it('should throw if email does not match invitation', async () => {
+      jest.spyOn(service as any, 'getInvitationByToken').mockResolvedValue({
+        id: 'inv-1',
+        email: 'invite@gmail.com',
+        workspaceId: 'workspace-1',
+        role: Role.EMPLOYEE,
+      });
+
+      await expect(
+        service.acceptInvitation('token-123', {
+          email: 'different@gmail.com',
+          username: 'testuser',
+          password: 'hashed-password',
+        }),
+      ).rejects.toThrow('Email does not match invitation');
+    });
+
+    it('should throw if user already exists', async () => {
+      jest.spyOn(service as any, 'getInvitationByToken').mockResolvedValue({
+        id: 'inv-1',
+        email: 'invite@gmail.com',
+        workspaceId: 'workspace-1',
+        role: Role.EMPLOYEE,
+      });
+
+      (prisma.user.findFirst as jest.Mock).mockResolvedValue({
+        id: 'user-1',
+      });
+
+      await expect(
+        service.acceptInvitation('token-123', {
+          email: 'invite@gmail.com',
+          username: 'existinguser',
+          password: 'hashed-password',
+        }),
+      ).rejects.toThrow('User with this email or username already exists');
+
+      expect(prisma.user.findFirst).toHaveBeenCalledWith({
+        where: {
+          OR: [{ email: 'invite@gmail.com' }, { username: 'existinguser' }],
+        },
+      });
+    });
+
+    it('should accept invitation successfully', async () => {
+      jest.spyOn(service as any, 'getInvitationByToken').mockResolvedValue({
+        id: 'inv-1',
+        email: 'invite@gmail.com',
+        workspaceId: 'workspace-1',
+        role: Role.EMPLOYEE,
+      });
+
+      (prisma.user.findFirst as jest.Mock).mockResolvedValue(null);
+
+      (prisma.user.create as jest.Mock).mockResolvedValue({
+        id: 'user-1',
+        email: 'invite@gmail.com',
+        username: 'newuser',
+        role: Role.EMPLOYEE,
+      });
+
+      (prisma.userWorkspace.create as jest.Mock).mockResolvedValue({
+        id: 'uw-1',
+      });
+
+      (prisma.workspaceInvitation.update as jest.Mock).mockResolvedValue({
+        id: 'inv-1',
+        accepted: true,
+      });
+
+      jest.spyOn(service['jwt'], 'sign').mockReturnValue('jwt-token');
+
+      const result = await service.acceptInvitation('token-123', {
+        email: 'invite@gmail.com',
+        username: 'newuser',
+        password: '123456',
+      });
+
+      expect(prisma.user.create).toHaveBeenCalledWith({
+        data: {
+          email: 'invite@gmail.com',
+          username: 'newuser',
+          password: expect.any(String),
+          role: Role.EMPLOYEE,
+          active: true,
+        },
+      });
+
+      expect(prisma.userWorkspace.create).toHaveBeenCalledWith({
+        data: {
+          userId: 'user-1',
+          workspaceId: 'workspace-1',
+          role: Role.EMPLOYEE,
+        },
+      });
+
+      expect(prisma.workspaceInvitation.update).toHaveBeenCalledWith({
+        where: {
+          id: 'inv-1',
+        },
+        data: {
+          accepted: true,
+        },
+      });
+
+      expect(result).toEqual({
+        message: 'Invitation accepted successfully',
+        accessToken: 'jwt-token',
+      });
     });
   });
 });

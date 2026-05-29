@@ -104,8 +104,9 @@ export class SettingsService {
     } catch {
       try {
         fs.unlinkSync(filePath);
-      } catch {}
-      throw new BadRequestException('Failed to update avatar');
+      } catch {
+        throw new BadRequestException('Failed to update avatar');
+      }
     }
   }
 }
