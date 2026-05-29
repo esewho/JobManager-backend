@@ -195,4 +195,98 @@ describe('WorkspaceService', () => {
       expect(result).toEqual(workspaces);
     });
   });
+
+  describe('getWorkspaceById', () => {
+    it('should throw if workspace not found', async () => {
+      (prisma.workspace.findUnique as jest.Mock).mockResolvedValue(null);
+
+      await expect(service.getWorkspaceById('workspace-1')).rejects.toThrow(
+        NotFoundException,
+      );
+      expect(prisma.workspace.findUnique).toHaveBeenCalledWith({
+        where: { id: 'workspace-1' },
+        select: {
+          id: true,
+          name: true,
+          imageUrl: true,
+          createdAt: true,
+          _count: { select: { users: true } },
+        },
+      });
+    });
+    it('should return a workspace by id', async () => {
+      const workspace = {
+        id: 'workspace-1',
+        name: 'Workspacpe 1',
+        imageuRL: '/uplodas/test.png',
+        createdAt: new Date(),
+        _count: {
+          users: 5,
+        },
+      };
+      (prisma.workspace.findUnique as jest.Mock).mockResolvedValue(workspace);
+
+      const result = await service.getWorkspaceById('workspace-1');
+
+      expect(result).toEqual(workspace);
+    });
+  });
+
+  describe('deleteWorkspace', () => {
+    it('should throw if user is not admin role', async () => {
+      (prisma.userWorkspace.findFirst as jest.Mock).mockResolvedValue({
+        role: Role.EMPLOYEE,
+      });
+
+      await expect(
+        service.deleteWorkspace('workspace-1', 'user-1'),
+      ).rejects.toThrow('Only admins can delete workspaces');
+
+      expect(prisma.userWorkspace.findFirst).toHaveBeenCalledWith({
+        where: {
+          userId: 'user-1',
+          workspaceId: 'workspace-1',
+        },
+      });
+    });
+
+    it('should throw if workspace is not found', async () => {
+      (prisma.userWorkspace.findFirst as jest.Mock).mockResolvedValue({
+        role: Role.ADMIN,
+      });
+
+      (prisma.workspace.findUnique as jest.Mock).mockResolvedValue(null);
+
+      await expect(
+        service.deleteWorkspace('workspace-1', 'user-1'),
+      ).rejects.toThrow(NotFoundException);
+    });
+
+    it('should delete workspace successfully', async () => {
+      (prisma.userWorkspace.findFirst as jest.Mock).mockResolvedValue({
+        role: Role.ADMIN,
+      });
+
+      (prisma.workspace.findUnique as jest.Mock).mockResolvedValue({
+        id: 'workspace-1',
+        name: 'Workspace 1',
+        imageUrl: null,
+        createdAt: new Date(),
+      });
+
+      (prisma.workspace.delete as jest.Mock).mockResolvedValue(undefined);
+
+      const result = await service.deleteWorkspace('workspace-1', 'user-1');
+
+      expect(prisma.workspace.delete).toHaveBeenCalledWith({
+        where: {
+          id: 'workspace-1',
+        },
+      });
+
+      expect(result).toEqual({
+        message: 'Workspace deleted successfully',
+      });
+    });
+  });
 });

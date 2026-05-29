@@ -18,6 +18,7 @@ jest.mock('src/prisma/prisma', () => ({
       findFirst: jest.fn(),
       findUnique: jest.fn(),
       create: jest.fn(),
+      count: jest.fn(),
     },
     workspace: {
       findFirst: jest.fn(),
@@ -195,6 +196,100 @@ describe('AuthService', () => {
 
       expect(result).toEqual({
         accessToken: 'fake-jwt-token',
+      });
+    });
+  });
+
+  describe('registerAdmin', () => {
+    it('should throw if there is already an admin', async () => {
+      (prisma.user.count as jest.Mock).mockResolvedValue(1);
+
+      await expect(
+        service.registerAdmin({
+          email: 'admin@gmail.com',
+          username: 'adminuser',
+          password: 'password123',
+        }),
+      ).rejects.toThrow('Admin registration is restricted');
+
+      expect(prisma.user.count).toHaveBeenCalledWith({
+        where: {
+          role: Role.ADMIN,
+        },
+      });
+    });
+
+    it('should throw if user already exists', async () => {
+      (prisma.user.count as jest.Mock).mockResolvedValue(0);
+
+      (prisma.user.findFirst as jest.Mock).mockResolvedValue({
+        id: 'user-1',
+      });
+
+      await expect(
+        service.registerAdmin({
+          email: 'admin@gmail.com',
+          username: 'adminuser',
+          password: 'password123',
+        }),
+      ).rejects.toThrow('User already exists');
+
+      expect(prisma.user.findFirst).toHaveBeenCalledWith({
+        where: {
+          OR: [{ email: 'admin@gmail.com' }, { username: 'adminuser' }],
+        },
+        select: {
+          id: true,
+        },
+      });
+    });
+
+    it('should register admin successfully', async () => {
+      (prisma.user.count as jest.Mock).mockResolvedValue(0);
+
+      (prisma.user.findFirst as jest.Mock).mockResolvedValue(null);
+
+      (prisma.user.create as jest.Mock).mockResolvedValue({
+        id: 'admin-1',
+        username: 'adminuser',
+        email: 'admin@gmail.com',
+        role: Role.ADMIN,
+        createdAt: new Date(),
+      });
+
+      jest.spyOn(service as any, 'signToken').mockResolvedValue('jwt-token');
+
+      const result = await service.registerAdmin({
+        email: 'admin@gmail.com',
+        username: 'adminuser',
+        password: 'password123',
+      });
+
+      expect(prisma.user.create).toHaveBeenCalledWith({
+        data: {
+          username: 'adminuser',
+          email: 'admin@gmail.com',
+          password: expect.any(String),
+          role: Role.ADMIN,
+        },
+        select: {
+          id: true,
+          username: true,
+          email: true,
+          role: true,
+          createdAt: true,
+        },
+      });
+
+      expect(result).toEqual({
+        accessToken: 'jwt-token',
+        user: {
+          id: 'admin-1',
+          username: 'adminuser',
+          email: 'admin@gmail.com',
+          role: Role.ADMIN,
+          createdAt: expect.any(Date),
+        },
       });
     });
   });

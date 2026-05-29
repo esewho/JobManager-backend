@@ -6,6 +6,7 @@ import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { InvitationService } from 'src/app/token-invitations/invitation.service';
 import { JwtService } from '@nestjs/jwt';
 import { prisma } from 'src/prisma/prisma';
+import { Role } from '@prisma/client';
 
 jest.mock('resend', () => ({
   Resend: jest.fn().mockImplementation(() => ({
@@ -20,6 +21,7 @@ jest.mock('src/prisma/prisma', () => ({
     workspaceInvitation: {
       findFirst: jest.fn(),
       findUnique: jest.fn(),
+      findMany: jest.fn(),
       create: jest.fn(),
       update: jest.fn(),
       delete: jest.fn(),
@@ -156,6 +158,41 @@ describe('InvitationService', () => {
       expect(result).toEqual({
         message: 'Invitation deleted successfully',
       });
+    });
+  });
+
+  describe('listAllInvitations', () => {
+    it('should throw if workspaceId is missing', async () => {
+      await expect(service.listAllInvitations('')).rejects.toThrow(
+        BadRequestException,
+      );
+    });
+    it('should return empty array if no invitations found', async () => {
+      (prisma.workspaceInvitation.findMany as jest.Mock).mockResolvedValue([]);
+
+      const result = await service.listAllInvitations('workspace-id');
+
+      expect(result).toEqual([]);
+    });
+
+    it('should return list of invitations', async () => {
+      const invitations = [
+        {
+          id: '1',
+          email: 'test@gmail.com',
+          role: Role.EMPLOYEE,
+          expiresAt: new Date(Date.now() + 10000),
+          accepted: false,
+        },
+      ];
+
+      (prisma.workspaceInvitation.findMany as jest.Mock).mockResolvedValue(
+        invitations,
+      );
+
+      const result = await service.listAllInvitations('workspace-id');
+
+      expect(result).toEqual(invitations);
     });
   });
 });
