@@ -135,69 +135,69 @@ describe('WorkSessionsService', () => {
         shift: null,
       });
     });
+    it('should pause the session of the user and return isPaused true', async () => {
+      const now = new Date();
+
+      (prisma.workSession.findFirst as jest.Mock).mockResolvedValue({
+        id: 'session-1',
+        userId: 'user-1',
+        workspaceId: 'workspace-1',
+        checkIn: new Date(now.getTime() - 2 * 60 * 60 * 1000),
+        checkOut: null,
+        status: 'OPEN',
+        pauses: [],
+      });
+
+      (prisma.workPause.create as jest.Mock).mockResolvedValue({
+        id: 'pause-1',
+        sessionId: 'session-1',
+        startTime: now,
+        endTime: null,
+      });
+
+      (prisma.workSession.update as jest.Mock).mockResolvedValue({
+        id: 'session-1',
+        status: 'PAUSED',
+      });
+
+      const result = await service.pauseSession('user-1', 'workspace-1');
+
+      expect(prisma.workSession.findFirst).toHaveBeenCalledWith({
+        where: {
+          userId: 'user-1',
+          workspaceId: 'workspace-1',
+          checkOut: null,
+        },
+        include: {
+          pauses: true,
+        },
+      });
+
+      expect(prisma.workPause.create).toHaveBeenCalledWith({
+        data: {
+          sessionId: 'session-1',
+          startTime: expect.any(Date),
+        },
+      });
+
+      expect(prisma.workSession.update).toHaveBeenCalledWith({
+        where: {
+          id: 'session-1',
+        },
+        data: {
+          status: 'PAUSED',
+        },
+      });
+
+      expect(result).toEqual({
+        isPaused: true,
+      });
+    });
     it('should throw if user has no open session in the workspace', async () => {
       (prisma.workSession.findFirst as jest.Mock).mockResolvedValue(null);
       await expect(service.checkOut('user-1', 'workspace-1')).rejects.toThrow(
         BadRequestException,
       );
-    });
-  });
-  it('should pause the session of the user and return isPaused true', async () => {
-    const now = new Date();
-
-    (prisma.workSession.findFirst as jest.Mock).mockResolvedValue({
-      id: 'session-1',
-      userId: 'user-1',
-      workspaceId: 'workspace-1',
-      checkIn: new Date(now.getTime() - 2 * 60 * 60 * 1000),
-      checkOut: null,
-      status: 'OPEN',
-      pauses: [],
-    });
-
-    (prisma.workPause.create as jest.Mock).mockResolvedValue({
-      id: 'pause-1',
-      sessionId: 'session-1',
-      startTime: now,
-      endTime: null,
-    });
-
-    (prisma.workSession.update as jest.Mock).mockResolvedValue({
-      id: 'session-1',
-      status: 'PAUSED',
-    });
-
-    const result = await service.pauseSession('user-1', 'workspace-1');
-
-    expect(prisma.workSession.findFirst).toHaveBeenCalledWith({
-      where: {
-        userId: 'user-1',
-        workspaceId: 'workspace-1',
-        checkOut: null,
-      },
-      include: {
-        pauses: true,
-      },
-    });
-
-    expect(prisma.workPause.create).toHaveBeenCalledWith({
-      data: {
-        sessionId: 'session-1',
-        startTime: expect.any(Date),
-      },
-    });
-
-    expect(prisma.workSession.update).toHaveBeenCalledWith({
-      where: {
-        id: 'session-1',
-      },
-      data: {
-        status: 'PAUSED',
-      },
-    });
-
-    expect(result).toEqual({
-      isPaused: true,
     });
   });
 

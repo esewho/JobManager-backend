@@ -11,9 +11,9 @@ import * as fs from 'fs';
 
 @Injectable()
 export class SettingsService {
-  async changeUserName(dto: UserSettingsDto, userId: string) {
+  async changeUserName(username: string, userId: string) {
     const existing = await prisma.user.findUnique({
-      where: { username: dto.username },
+      where: { username: username },
     });
     if (existing) {
       throw new BadRequestException('Username already exists');
@@ -22,7 +22,7 @@ export class SettingsService {
       where: {
         id: userId,
       },
-      data: { username: dto.username },
+      data: { username: username },
       select: {
         id: true,
         username: true,
@@ -45,7 +45,7 @@ export class SettingsService {
     if (!isValid) {
       throw new BadRequestException('Current password is incorrect');
     }
-    if (dto.newPassword.length < 6) {
+    if (dto?.newPassword && dto.newPassword.length < 6) {
       throw new BadRequestException('Password is too short');
     }
     const hashedPassword = await bcrypt.hash(dto.newPassword, 10);
