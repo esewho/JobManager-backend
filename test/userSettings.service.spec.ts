@@ -1,4 +1,5 @@
 import * as bcrypt from 'bcrypt';
+import * as fs from 'fs';
 import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { prisma } from 'src/prisma/prisma';
 import { SettingsService } from '../src/app/userSettings/settings.service';
@@ -19,7 +20,14 @@ jest.mock('bcrypt', () => ({
   hash: jest.fn(),
 }));
 
-describe('changeUserNameService', () => {
+jest.mock('fs', () => ({
+  existsSync: jest.fn(),
+  mkdirSync: jest.fn(),
+  writeFileSync: jest.fn(),
+  unlinkSync: jest.fn(),
+}));
+
+describe('SettingsService', () => {
   let service: SettingsService;
 
   beforeEach(() => {
@@ -160,6 +168,76 @@ describe('changeUserNameService', () => {
         },
       });
       expect(result.id).toBe('user-1');
+    });
+  });
+
+  describe('updateAvatarImage', () => {
+    it('should throw if no file provided', async () => {
+      await expect(
+        service.updateAvatarImage(undefined as any, 'user-1'),
+      ).rejects.toThrow(BadRequestException);
+    });
+    it('should throw if user not found', async () => {
+      (prisma.user.findUnique as jest.Mock).mockResolvedValue(null);
+
+      const file = {
+        originalname: 'avatar.png',
+        buffer: Buffer.from('test'),
+      } as Express.Multer.File;
+
+      await expect(service.updateAvatarImage(file, 'user-1')).rejects.toThrow(
+        NotFoundException,
+      );
+    });
+
+    it('should update avatar successfully', async () => {
+      const file = {
+        originalname: 'avaytar.png',
+        buffer: Buffer.from('test'),
+      } as Express.Multer.File;
+
+      (fs.existsSync as jest.Mock).mockReturnValue(true);
+
+      (prisma.user.findUnique as jest.Mock).mockResolvedValue({
+        id: 'user-1',
+      });
+
+      (prisma.user.update as jest.Mock).mockResolvedValue({
+        id: 'user-1',
+        username: 'lolaso',
+        avatarUrl: '/uploads/avatar.png',
+      });
+      const result = await service.updateAvatarImage(file, 'user-1');
+
+      expect(prisma.user.update).toHaveBeenCalled();
+
+      expect(result).toEqual({
+        id: 'user-1',
+        username: 'lolaso',
+        avatarUrl: '/uploads/avatar.png',
+      });
+    });
+
+    it('should throw if avatar update fails', async () => {
+      const file = {
+        originalname: 'avatar.png',
+        buffer: Buffer.from('test'),
+      } as Express.Multer.File;
+
+      (fs.existsSync as jest.Mock).mockReturnValue(true);
+
+      (prisma.user.findUnique as jest.Mock).mockResolvedValue({ id: 'user-1' });
+
+      (prisma.user.update as jest.Mock).mockRejectedValue(
+        new Error('Failed to update avatar'),
+      );
+      (fs.unlinkSync as jest.Mock).mockImplementation(() => {
+        throw new Error();
+      });
+
+      await expect(service.updateAvatarImage(file, 'user-1')).rejects.toThrow(
+        BadRequestException,
+      );
     });
   });
 });
