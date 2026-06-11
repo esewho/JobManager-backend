@@ -36,6 +36,9 @@ export class AdminService {
   }
 
   async getAllWorkspaceUsers(workspaceId: string) {
+    if (!workspaceId) {
+      throw new BadRequestException('No workspace founded');
+    }
     return await prisma.userWorkspace.findMany({
       where: { workspaceId },
       select: {
@@ -67,40 +70,40 @@ export class AdminService {
     });
   }
 
-  async updateWorkSessionShift(sessionId: string, shift: WorkShift) {
-    const session = await prisma.workSession.findUnique({
-      where: { id: sessionId },
-    });
-    if (!session) {
-      throw new NotFoundException('Work session not found');
-    }
-    if (session.status !== WorkSessionStatus.CLOSED) {
-      throw new BadRequestException('Only closed sessions can be updated');
-    }
+  // async updateWorkSessionShift(sessionId: string, shift: WorkShift) {
+  //   const session = await prisma.workSession.findUnique({
+  //     where: { id: sessionId },
+  //   });
+  //   if (!session) {
+  //     throw new NotFoundException('Work session not found');
+  //   }
+  //   if (session.status !== WorkSessionStatus.CLOSED) {
+  //     throw new BadRequestException('Only closed sessions can be updated');
+  //   }
 
-    if (session.shift) {
-      throw new BadRequestException('Shift has already been assigned');
-    }
+  //   if (session.shift) {
+  //     throw new BadRequestException('Shift has already been assigned');
+  //   }
 
-    const { start, end } = getDayRange(session.checkIn);
+  //   const { start, end } = getDayRange(session.checkIn);
 
-    const existingSameShift = await prisma.workSession.findFirst({
-      where: {
-        userId: session.userId,
-        shift,
-        checkIn: { gte: start, lte: end },
-      },
-    });
-    if (existingSameShift) {
-      throw new BadRequestException(
-        `User already has a ${shift} shift for this day`,
-      );
-    }
-    return await prisma.workSession.update({
-      where: { id: sessionId },
-      data: { shift },
-    });
-  }
+  //   const existingSameShift = await prisma.workSession.findFirst({
+  //     where: {
+  //       userId: session.userId,
+  //       shift,
+  //       checkIn: { gte: start, lte: end },
+  //     },
+  //   });
+  //   if (existingSameShift) {
+  //     throw new BadRequestException(
+  //       `User already has a ${shift} shift for this day`,
+  //     );
+  //   }
+  //   return await prisma.workSession.update({
+  //     where: { id: sessionId },
+  //     data: { shift },
+  //   });
+  // }
 
   async getAllWorkSessions(workspaceId: string) {
     return prisma.workSession.findMany({
@@ -141,16 +144,16 @@ export class AdminService {
     });
   }
 
-  async getAllTipsPools() {
-    return await prisma.tipPool.findMany({
-      select: {
-        distributions: true,
-        date: true,
-        shift: true,
-        totalAmount: true,
-      },
-    });
-  }
+  // async getAllTipsPools() {
+  //   return await prisma.tipPool.findMany({
+  //     select: {
+  //       distributions: true,
+  //       date: true,
+  //       shift: true,
+  //       totalAmount: true,
+  //     },
+  //   });
+  // }
 
   async createEmployee(
     dto: CreateUserDto,
