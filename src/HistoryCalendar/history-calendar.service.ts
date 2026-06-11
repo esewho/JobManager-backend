@@ -10,7 +10,6 @@ export class HistoryCalendarService {
     month: number,
     year: number,
   ) {
-    // LOCAL TIME
     const monthStart = new Date(year, month - 1, 1);
     const monthEnd = new Date(year, month, 0, 23, 59, 59);
 
