@@ -115,4 +115,6 @@ describe('WorkSchedulesService', () => {
       });
     });
   });
+
+  describe('updateScheduleStatus');
 });
