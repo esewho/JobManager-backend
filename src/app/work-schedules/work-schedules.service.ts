@@ -191,7 +191,7 @@ export class WorkSchedulesService {
       throw new ForbiddenException('You cannot modify this schedule');
     }
     if (schedule.status !== ScheduleStatus.PENDING) {
-      throw new BadRequestException('Schedule alread processed');
+      throw new BadRequestException('Schedule already processed');
     }
 
     await prisma.workSchedule.update({
@@ -203,6 +203,9 @@ export class WorkSchedulesService {
   }
 
   async getMyNextSchedule(workspaceId: string, userId: string) {
+    if (!workspaceId || !userId) {
+      throw new NotFoundException('No user or workspace founded');
+    }
     const now = new Date();
 
     return prisma.workSchedule.findFirst({
