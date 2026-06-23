@@ -357,4 +357,83 @@ describe('WorkSchedulesService', () => {
       expect(result).toEqual(schedules);
     });
   });
+
+  describe('getMyPendingSchedules', () => {
+    it('should return all pending schedules of user', async () => {
+      const schedules = [
+        {
+          id: 'schedule-1',
+          status: ScheduleStatus.PENDING,
+          date: new Date(),
+        },
+      ];
+      (prisma.workSchedule.findMany as jest.Mock).mockResolvedValue(schedules);
+
+      const result = await service.getMyPendingSchedules(
+        'user-1',
+        'workspace-1',
+      );
+      expect(prisma.workSchedule.findMany).toHaveBeenCalledWith({
+        where: {
+          status: ScheduleStatus.PENDING,
+          userWorkspace: { userId: 'user-1', workspaceId: 'workspace-1' },
+        },
+        orderBy: {
+          date: 'asc',
+        },
+      });
+      expect(result).toEqual(schedules);
+    });
+
+    it('should return empty array when no pending schedulese exist', async () => {
+      (prisma.workSchedule.findMany as jest.Mock).mockResolvedValue([]);
+
+      const result = await service.getMyPendingSchedules(
+        'user-1',
+        'workspace-1',
+      );
+      expect(result).toEqual([]);
+    });
+  });
+
+  describe('getMyNextSchedule', () => {
+    it('should throw if workspace is missing', async () => {
+      await expect(service.getMyNextSchedule('', 'user-1')).rejects.toThrow(
+        NotFoundException,
+      );
+    });
+    it('should throw if userId is missing', async () => {
+      await expect(
+        service.getMyNextSchedule('workspace-1', ''),
+      ).rejects.toThrow(NotFoundException);
+    });
+
+    it('should return next accepted schedule', async () => {
+      const schedule = {
+        id: 'schedule-1',
+        status: ScheduleStatus.ACCEPTED,
+        startTime: new Date(Date.now() + 60 * 60 * 1000),
+      };
+      (prisma.workSchedule.findFirst as jest.Mock).mockResolvedValue(schedule);
+
+      const result = await service.getMyNextSchedule('workspace-1', 'user-1');
+
+      expect(prisma.workSchedule.findFirst as jest.Mock).toHaveBeenCalledWith({
+        where: {
+          status: ScheduleStatus.ACCEPTED,
+          startTime: {
+            gte: expect.any(Date),
+          },
+          userWorkspace: {
+            userId: 'user-1',
+            workspaceId: 'workspace-1',
+          },
+        },
+        orderBy: {
+          startTime: 'asc',
+        },
+      });
+      expect(result).toEqual(schedule);
+    });
+  });
 });
